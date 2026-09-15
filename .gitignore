@@ -1,0 +1,58 @@
+# Vivado project directory (ProjectFlashV0 lives here)
+/verilog/
+
+# Vivado
+*.jou
+*.log
+*.str
+.Xil/
+vivado*/
+*.cache/
+*.hw/
+*.ip_user_files/
+*.runs/
+*.sim/
+*.srcs/
+*.gen/
+*.xpr
+# Python / Colab
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+flash_v0_mem/
+*.zip
+# Sim artefacts
+*.vcd
+*.wdb
+xsim.dir/
+webtalk*
+
+# FPGA implementation outputs (bitstreams, checkpoints, reports) -
+# regenerate from the Vivado project, don't commit
+*.bit
+*.bin
+*.mcs
+*.prm
+*.ltx
+*.dcp
+*.rpt
+*.pb
+
+# ML training artefacts / datasets for later phases (v1+) -
+# only exported .mem weights and small test vectors belong in git
+*.pth
+*.pt
+*.h5
+*.ckpt
+*.onnx
+*.npz
+checkpoints/
+wandb/
+runs/
+data/
+datasets/
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+.vscode/
