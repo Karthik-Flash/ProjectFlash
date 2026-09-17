@@ -56,3 +56,71 @@ datasets/
 .DS_Store
 Thumbs.db
 .vscode/
+
+flash_v1_1_smoke_export_28x28
+model_state.pt
+# ---- v0 rules (unchanged) ----
+/verilog/
+*.jou
+*.log
+*.str
+.Xil/
+vivado*/
+*.cache/
+*.hw/
+*.ip_user_files/
+*.runs/
+*.sim/
+*.srcs/
+*.gen/
+*.xpr
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+flash_v0_mem/
+*.zip
+*.vcd
+*.wdb
+xsim.dir/
+webtalk*
+*.bit
+*.bin
+*.mcs
+*.prm
+*.ltx
+*.dcp
+*.rpt
+*.pb
+*.pth
+*.pt
+*.h5
+*.ckpt
+*.onnx
+*.npz
+checkpoints/
+wandb/
+runs/
+data/
+datasets/
+.DS_Store
+Thumbs.db
+.vscode/
+
+# ---- V1 additions ----
+# Downloaded/decoded RSNA cache and the raw Colab export zips
+flash_v1/
+flash_v1_*.zip
+
+# Everything under v1/mem/ is regeneratable from the notebook + weights.
+# Commit only the small files needed for RTL, drop the bulk vectors.
+v1/mem/*/*/vectors/img_*.mem
+v1/mem/*/*/vectors/trace/
+v1/mem/*/*/model_state.pt
+v1/mem/*/*/report/
+# Colab dumps its notebook copy inside each export folder; the source of
+# truth is colab/ProjectFlash_V1.ipynb, so drop the duplicates.
+v1/mem/*/ProjectFlash_V1_*.ipynb
+
+# Vivado V1 project workspace (parallel to v0's ignore rule)
+verilog_v1/
+v1/vivado/

@@ -1,0 +1,191 @@
+{
+ "fields": [
+  [
+   "op",
+   4
+  ],
+  [
+   "kernel",
+   4
+  ],
+  [
+   "stride",
+   4
+  ],
+  [
+   "pad",
+   4
+  ],
+  [
+   "in_c",
+   12
+  ],
+  [
+   "out_c",
+   12
+  ],
+  [
+   "in_h",
+   12
+  ],
+  [
+   "in_w",
+   12
+  ],
+  [
+   "out_h",
+   12
+  ],
+  [
+   "out_w",
+   12
+  ],
+  [
+   "shift",
+   6
+  ],
+  [
+   "w_base",
+   20
+  ],
+  [
+   "b_base",
+   10
+  ]
+ ],
+ "opcodes": {
+  "CONV3X3": 1,
+  "GAP": 2,
+  "FC": 3
+ },
+ "word_width": 128,
+ "img": 224,
+ "layers": [
+  {
+   "name": "conv1",
+   "op": "CONV3X3",
+   "kernel": 3,
+   "stride": 2,
+   "pad": 1,
+   "in_c": 1,
+   "out_c": 8,
+   "in_h": 224,
+   "in_w": 224,
+   "out_h": 112,
+   "out_w": 112,
+   "shift": 7,
+   "w_base": 0,
+   "b_base": 0,
+   "n_w": 72,
+   "n_b": 8
+  },
+  {
+   "name": "conv2",
+   "op": "CONV3X3",
+   "kernel": 3,
+   "stride": 2,
+   "pad": 1,
+   "in_c": 8,
+   "out_c": 16,
+   "in_h": 112,
+   "in_w": 112,
+   "out_h": 56,
+   "out_w": 56,
+   "shift": 7,
+   "w_base": 72,
+   "b_base": 8,
+   "n_w": 1152,
+   "n_b": 16
+  },
+  {
+   "name": "conv3",
+   "op": "CONV3X3",
+   "kernel": 3,
+   "stride": 2,
+   "pad": 1,
+   "in_c": 16,
+   "out_c": 32,
+   "in_h": 56,
+   "in_w": 56,
+   "out_h": 28,
+   "out_w": 28,
+   "shift": 7,
+   "w_base": 1224,
+   "b_base": 24,
+   "n_w": 4608,
+   "n_b": 32
+  },
+  {
+   "name": "conv4",
+   "op": "CONV3X3",
+   "kernel": 3,
+   "stride": 2,
+   "pad": 1,
+   "in_c": 32,
+   "out_c": 48,
+   "in_h": 28,
+   "in_w": 28,
+   "out_h": 14,
+   "out_w": 14,
+   "shift": 8,
+   "w_base": 5832,
+   "b_base": 56,
+   "n_w": 13824,
+   "n_b": 48
+  },
+  {
+   "name": "conv5",
+   "op": "CONV3X3",
+   "kernel": 3,
+   "stride": 2,
+   "pad": 1,
+   "in_c": 48,
+   "out_c": 64,
+   "in_h": 14,
+   "in_w": 14,
+   "out_h": 7,
+   "out_w": 7,
+   "shift": 8,
+   "w_base": 19656,
+   "b_base": 104,
+   "n_w": 27648,
+   "n_b": 64
+  },
+  {
+   "name": "gap",
+   "op": "GAP",
+   "kernel": 0,
+   "stride": 0,
+   "pad": 0,
+   "in_c": 64,
+   "out_c": 64,
+   "in_h": 7,
+   "in_w": 7,
+   "out_h": 1,
+   "out_w": 1,
+   "shift": 6,
+   "w_base": 0,
+   "b_base": 0,
+   "n_w": 0,
+   "n_b": 0
+  },
+  {
+   "name": "fc",
+   "op": "FC",
+   "kernel": 1,
+   "stride": 1,
+   "pad": 0,
+   "in_c": 64,
+   "out_c": 2,
+   "in_h": 1,
+   "in_w": 1,
+   "out_h": 1,
+   "out_w": 1,
+   "shift": 0,
+   "w_base": 47304,
+   "b_base": 168,
+   "n_w": 128,
+   "n_b": 2
+  }
+ ]
+}
