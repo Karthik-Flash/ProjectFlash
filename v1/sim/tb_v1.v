@@ -274,7 +274,11 @@ module tb_v1;
     end
 
     initial begin
-        #200000000;
+        // 5e9 time units (25x the old 200e6) -- the v1_2 224x224 sweep needs
+        // ~2.5e9. Sized to 64 bits deliberately: an unsized decimal literal is
+        // 32 bits in most tools, and 5e9 > 2^32-1 would silently wrap to
+        // 705,032,704 and fire the timeout early.
+        #64'd5_000_000_000;
         $display("RESULT: FAIL  (timeout)");
         $finish;
     end
