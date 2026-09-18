@@ -1,8 +1,11 @@
 // fmap_ram.v -- Project FLASH V1, feature-map BRAM wrapper.
 //
-// Trivial single-clock RAM, uint8, 65536-deep (largest V1.1 feature map is
-// conv1's output at 1568 bytes; 64KB gives ~40x headroom and matches one
-// BRAM36 pair). Synchronous read: rd_data reflects rd_addr one cycle later.
+// Trivial single-clock RAM, uint8, 131072-deep (2^17). Sized for the
+// largest V1.2 feature map: conv1's output at 8*112*112 = 100,352 bytes,
+// which does not fit the previous 65,536-byte depth. Kept a power of two so
+// it maps cleanly onto BRAM tiles. V1.1's largest map is only 1,568 bytes,
+// so this is heavily oversized there but harmless.
+// Synchronous read: rd_data reflects rd_addr one cycle later.
 // Write-then-read to the same address in the same cycle reads the OLD value
 // (rd_data is registered from the pre-write memory contents), which matches
 // ordinary block-RAM read-first behaviour and is never relied on by any V1
@@ -22,7 +25,7 @@ module fmap_ram (
     output reg  [7:0]  rd_data
 );
 
-    reg [7:0] mem [0:65535];
+    reg [7:0] mem [0:131071];
 
     always @(posedge clk) begin
         if (we) mem[wr_addr] <= wr_data;

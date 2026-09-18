@@ -50,11 +50,17 @@ Per-module breakdown (LUT/FF/DSP/BRAM36):
 - **DSPs 14 vs predicted 1–3**: Vivado inferred DSPs for address arithmetic
   (`c*in_h*in_w + y*in_w + x`), not just the MAC. Non-issue at 6.4%; will
   be relevant to watch when V1.2 keeps the same arithmetic but at 224.
-- **BRAM36 48 vs predicted 13**: two ping-pong fmap RAMs were sized at
-  64 KB each for future v1_2 compatibility (v1_2 needs 100 KB per fmap).
-  For v1_1 (largest fmap 1.6 KB) this is ~40× oversized but harmless at
-  34%. Could shrink by parameterising the RAM depth on IMG size, deferred
-  until v1_2 numbers are in hand.
+- **BRAM36 48 vs predicted 13**: two ping-pong fmap RAMs, each 64 KB deep
+  at the time of this run. For v1_1 (largest fmap 1.6 KB) that is ~40×
+  oversized but harmless at 34%.
+
+  Note the 64 KB depth does **not** cover v1_2: its conv1 output is
+  100,352 bytes (8 × 112 × 112). `fmap_ram` has since been widened to
+  128 KB (2^17) so v1_2 fits, which means **the 48 BRAM36 figure above is
+  v1_1's, measured against the old 64 KB RAMs** — v1_2's utilization will
+  be higher and is not yet measured. Both numbers need a fresh synth run
+  before either is quoted. Could also shrink by parameterising the RAM
+  depth on IMG size; deferred until the v1_2 numbers are in hand.
 
 ## Known-not-yet-checked
 
