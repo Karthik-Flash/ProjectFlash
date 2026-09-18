@@ -10,7 +10,7 @@
 module tb_v1;
 
     localparam N_IMAGES = 16;
-    localparam DEFAULT_THRESHOLD = -32'sd8050; // sim_config.vh, V1.1
+    localparam DEFAULT_THRESHOLD = -32'sd646; // sim_config.vh, V1.2
 
     reg clk, rst, start;
     reg [7:0] pixel_in;
@@ -20,7 +20,15 @@ module tb_v1;
     wire signed [31:0] logit0, logit1, margin;
     wire positive, result_valid;
 
-    top_v1 dut (
+    // top_v1's *_FILE parameters still default to the v1_1 export, so they
+    // are overridden here rather than in the RTL -- without this the DUT
+    // would load the 28x28 weights and layer table while this testbench fed
+    // it 224x224 images and checked v1_2 expectations.
+    top_v1 #(
+        .WEIGHTS_FILE    ("../mem/v1_2/flash_v1_2/weights.mem"),
+        .BIAS_FILE       ("../mem/v1_2/flash_v1_2/bias.mem"),
+        .LAYER_TABLE_FILE("../mem/v1_2/flash_v1_2/layer_table.mem")
+    ) dut (
         .clk(clk), .rst(rst), .start(start),
         .pixel_in(pixel_in), .pixel_valid(pixel_valid),
         .threshold_wr(threshold_wr), .threshold_wr_en(threshold_wr_en),
@@ -32,24 +40,26 @@ module tb_v1;
     always #5 clk = ~clk;
 
     // ---- expected vectors ----
-    reg [7:0]  img        [0:783];
+    reg [7:0]  img        [0:50175];
     reg [31:0] exp_l0     [0:243];
     reg [31:0] exp_l1     [0:243];
     reg [31:0] exp_margin [0:243];
     reg [7:0]  exp_dec    [0:243];
 
-    reg [7:0] exp_conv1 [0:1567];
-    reg [7:0] exp_conv2 [0:783];
-    reg [7:0] exp_conv3 [0:511];
-    reg [7:0] exp_conv4 [0:191];
-    reg [7:0] exp_conv5 [0:63];
+    // v1_2 layer output sizes: conv1 8*112*112, conv2 16*56*56,
+    // conv3 32*28*28, conv4 48*14*14, conv5 64*7*7, gap 64.
+    reg [7:0] exp_conv1 [0:100351];
+    reg [7:0] exp_conv2 [0:50175];
+    reg [7:0] exp_conv3 [0:25087];
+    reg [7:0] exp_conv4 [0:9407];
+    reg [7:0] exp_conv5 [0:3135];
     reg [7:0] exp_gap   [0:63];
 
-    reg [7:0] cap_conv1 [0:1567];
-    reg [7:0] cap_conv2 [0:783];
-    reg [7:0] cap_conv3 [0:511];
-    reg [7:0] cap_conv4 [0:191];
-    reg [7:0] cap_conv5 [0:63];
+    reg [7:0] cap_conv1 [0:100351];
+    reg [7:0] cap_conv2 [0:50175];
+    reg [7:0] cap_conv3 [0:25087];
+    reg [7:0] cap_conv4 [0:9407];
+    reg [7:0] cap_conv5 [0:3135];
     reg [7:0] cap_gap   [0:63];
 
     // ---- scoreboard ----
@@ -69,15 +79,15 @@ module tb_v1;
     always @(posedge clk) begin
         if (capture_en && dut.u_seq.state == 3'd4) begin
             case (dut.u_seq.layer_idx)
-                3'd0: for (c_i = 0; c_i < 1568; c_i = c_i + 1)
+                3'd0: for (c_i = 0; c_i < 100352; c_i = c_i + 1)
                           cap_conv1[c_i] = dut.buf_sel ? dut.u_ram_a.mem[c_i] : dut.u_ram_b.mem[c_i];
-                3'd1: for (c_i = 0; c_i < 784; c_i = c_i + 1)
+                3'd1: for (c_i = 0; c_i < 50176; c_i = c_i + 1)
                           cap_conv2[c_i] = dut.buf_sel ? dut.u_ram_a.mem[c_i] : dut.u_ram_b.mem[c_i];
-                3'd2: for (c_i = 0; c_i < 512; c_i = c_i + 1)
+                3'd2: for (c_i = 0; c_i < 25088; c_i = c_i + 1)
                           cap_conv3[c_i] = dut.buf_sel ? dut.u_ram_a.mem[c_i] : dut.u_ram_b.mem[c_i];
-                3'd3: for (c_i = 0; c_i < 192; c_i = c_i + 1)
+                3'd3: for (c_i = 0; c_i < 9408; c_i = c_i + 1)
                           cap_conv4[c_i] = dut.buf_sel ? dut.u_ram_a.mem[c_i] : dut.u_ram_b.mem[c_i];
-                3'd4: for (c_i = 0; c_i < 64; c_i = c_i + 1)
+                3'd4: for (c_i = 0; c_i < 3136; c_i = c_i + 1)
                           cap_conv5[c_i] = dut.buf_sel ? dut.u_ram_a.mem[c_i] : dut.u_ram_b.mem[c_i];
                 3'd5: for (c_i = 0; c_i < 64; c_i = c_i + 1)
                           cap_gap[c_i] = dut.gap_out_flat[c_i * 14 +: 8];
@@ -138,9 +148,9 @@ module tb_v1;
         input integer img_idx;
         integer p;
         begin
-            // stream the 784 input pixels in
+            // stream the 50176 input pixels in (224*224)
             @(posedge clk);
-            for (p = 0; p < 784; p = p + 1) begin
+            for (p = 0; p < 50176; p = p + 1) begin
                 @(posedge clk);
                 pixel_valid <= 1'b1;
                 pixel_in    <= img[p];
@@ -173,10 +183,10 @@ module tb_v1;
         ok_l0 = 0; ok_l1 = 0; ok_margin = 0; ok_dec = 0; ok_trace = 0;
         fail_img = -1; fail_layer = -1;
 
-        $readmemh("../mem/v1_1/flash_v1_1/vectors/exp_logit0.mem", exp_l0);
-        $readmemh("../mem/v1_1/flash_v1_1/vectors/exp_logit1.mem", exp_l1);
-        $readmemh("../mem/v1_1/flash_v1_1/vectors/exp_margin.mem", exp_margin);
-        $readmemh("../mem/v1_1/flash_v1_1/vectors/exp_decision.mem", exp_dec);
+        $readmemh("../mem/v1_2/flash_v1_2/vectors/exp_logit0.mem", exp_l0);
+        $readmemh("../mem/v1_2/flash_v1_2/vectors/exp_logit1.mem", exp_l1);
+        $readmemh("../mem/v1_2/flash_v1_2/vectors/exp_margin.mem", exp_margin);
+        $readmemh("../mem/v1_2/flash_v1_2/vectors/exp_decision.mem", exp_dec);
 
         repeat (5) @(posedge clk);
         rst = 1'b0;
@@ -188,38 +198,38 @@ module tb_v1;
 
         for (k = 0; k < N_IMAGES; k = k + 1) begin
             case (k)
-                0:  $readmemh("../mem/v1_1/flash_v1_1/vectors/img_0.mem",  img);
-                1:  $readmemh("../mem/v1_1/flash_v1_1/vectors/img_1.mem",  img);
-                2:  $readmemh("../mem/v1_1/flash_v1_1/vectors/img_2.mem",  img);
-                3:  $readmemh("../mem/v1_1/flash_v1_1/vectors/img_3.mem",  img);
-                4:  $readmemh("../mem/v1_1/flash_v1_1/vectors/img_4.mem",  img);
-                5:  $readmemh("../mem/v1_1/flash_v1_1/vectors/img_5.mem",  img);
-                6:  $readmemh("../mem/v1_1/flash_v1_1/vectors/img_6.mem",  img);
-                7:  $readmemh("../mem/v1_1/flash_v1_1/vectors/img_7.mem",  img);
-                8:  $readmemh("../mem/v1_1/flash_v1_1/vectors/img_8.mem",  img);
-                9:  $readmemh("../mem/v1_1/flash_v1_1/vectors/img_9.mem",  img);
-                10: $readmemh("../mem/v1_1/flash_v1_1/vectors/img_10.mem", img);
-                11: $readmemh("../mem/v1_1/flash_v1_1/vectors/img_11.mem", img);
-                12: $readmemh("../mem/v1_1/flash_v1_1/vectors/img_12.mem", img);
-                13: $readmemh("../mem/v1_1/flash_v1_1/vectors/img_13.mem", img);
-                14: $readmemh("../mem/v1_1/flash_v1_1/vectors/img_14.mem", img);
-                default: $readmemh("../mem/v1_1/flash_v1_1/vectors/img_15.mem", img);
+                0:  $readmemh("../mem/v1_2/flash_v1_2/vectors/img_0.mem",  img);
+                1:  $readmemh("../mem/v1_2/flash_v1_2/vectors/img_1.mem",  img);
+                2:  $readmemh("../mem/v1_2/flash_v1_2/vectors/img_2.mem",  img);
+                3:  $readmemh("../mem/v1_2/flash_v1_2/vectors/img_3.mem",  img);
+                4:  $readmemh("../mem/v1_2/flash_v1_2/vectors/img_4.mem",  img);
+                5:  $readmemh("../mem/v1_2/flash_v1_2/vectors/img_5.mem",  img);
+                6:  $readmemh("../mem/v1_2/flash_v1_2/vectors/img_6.mem",  img);
+                7:  $readmemh("../mem/v1_2/flash_v1_2/vectors/img_7.mem",  img);
+                8:  $readmemh("../mem/v1_2/flash_v1_2/vectors/img_8.mem",  img);
+                9:  $readmemh("../mem/v1_2/flash_v1_2/vectors/img_9.mem",  img);
+                10: $readmemh("../mem/v1_2/flash_v1_2/vectors/img_10.mem", img);
+                11: $readmemh("../mem/v1_2/flash_v1_2/vectors/img_11.mem", img);
+                12: $readmemh("../mem/v1_2/flash_v1_2/vectors/img_12.mem", img);
+                13: $readmemh("../mem/v1_2/flash_v1_2/vectors/img_13.mem", img);
+                14: $readmemh("../mem/v1_2/flash_v1_2/vectors/img_14.mem", img);
+                default: $readmemh("../mem/v1_2/flash_v1_2/vectors/img_15.mem", img);
             endcase
 
             if (k == 0) begin
-                $readmemh("../mem/v1_1/flash_v1_1/vectors/trace/img0_conv1.mem", exp_conv1);
-                $readmemh("../mem/v1_1/flash_v1_1/vectors/trace/img0_conv2.mem", exp_conv2);
-                $readmemh("../mem/v1_1/flash_v1_1/vectors/trace/img0_conv3.mem", exp_conv3);
-                $readmemh("../mem/v1_1/flash_v1_1/vectors/trace/img0_conv4.mem", exp_conv4);
-                $readmemh("../mem/v1_1/flash_v1_1/vectors/trace/img0_conv5.mem", exp_conv5);
-                $readmemh("../mem/v1_1/flash_v1_1/vectors/trace/img0_gap.mem",   exp_gap);
+                $readmemh("../mem/v1_2/flash_v1_2/vectors/trace/img0_conv1.mem", exp_conv1);
+                $readmemh("../mem/v1_2/flash_v1_2/vectors/trace/img0_conv2.mem", exp_conv2);
+                $readmemh("../mem/v1_2/flash_v1_2/vectors/trace/img0_conv3.mem", exp_conv3);
+                $readmemh("../mem/v1_2/flash_v1_2/vectors/trace/img0_conv4.mem", exp_conv4);
+                $readmemh("../mem/v1_2/flash_v1_2/vectors/trace/img0_conv5.mem", exp_conv5);
+                $readmemh("../mem/v1_2/flash_v1_2/vectors/trace/img0_gap.mem",   exp_gap);
             end else if (k == 1) begin
-                $readmemh("../mem/v1_1/flash_v1_1/vectors/trace/img1_conv1.mem", exp_conv1);
-                $readmemh("../mem/v1_1/flash_v1_1/vectors/trace/img1_conv2.mem", exp_conv2);
-                $readmemh("../mem/v1_1/flash_v1_1/vectors/trace/img1_conv3.mem", exp_conv3);
-                $readmemh("../mem/v1_1/flash_v1_1/vectors/trace/img1_conv4.mem", exp_conv4);
-                $readmemh("../mem/v1_1/flash_v1_1/vectors/trace/img1_conv5.mem", exp_conv5);
-                $readmemh("../mem/v1_1/flash_v1_1/vectors/trace/img1_gap.mem",   exp_gap);
+                $readmemh("../mem/v1_2/flash_v1_2/vectors/trace/img1_conv1.mem", exp_conv1);
+                $readmemh("../mem/v1_2/flash_v1_2/vectors/trace/img1_conv2.mem", exp_conv2);
+                $readmemh("../mem/v1_2/flash_v1_2/vectors/trace/img1_conv3.mem", exp_conv3);
+                $readmemh("../mem/v1_2/flash_v1_2/vectors/trace/img1_conv4.mem", exp_conv4);
+                $readmemh("../mem/v1_2/flash_v1_2/vectors/trace/img1_conv5.mem", exp_conv5);
+                $readmemh("../mem/v1_2/flash_v1_2/vectors/trace/img1_gap.mem",   exp_gap);
             end
 
             capture_en = (k < 2);
@@ -240,12 +250,12 @@ module tb_v1;
             if (positive === e_dec) ok_dec = ok_dec + 1;
 
             if (k < 2) begin
-                check_layer(k, 1, 1568, 14, 14);
-                check_layer(k, 2, 784,   7,  7);
-                check_layer(k, 3, 512,   4,  4);
-                check_layer(k, 4, 192,   2,  2);
-                check_layer(k, 5, 64,    1,  1);
-                check_layer(k, 6, 64,    1,  1);
+                check_layer(k, 1, 100352, 112, 112);
+                check_layer(k, 2, 50176,   56,  56);
+                check_layer(k, 3, 25088,   28,  28);
+                check_layer(k, 4, 9408,    14,  14);
+                check_layer(k, 5, 3136,     7,   7);
+                check_layer(k, 6, 64,       1,   1);
             end
         end
 
