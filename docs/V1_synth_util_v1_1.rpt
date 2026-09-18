@@ -1,0 +1,36 @@
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+---------------------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2022.2 (win64) Build 3671981 Fri Oct 14 05:00:03 MDT 2022
+| Date         : Fri Sep 18 22:12:02 2026
+| Host         : Karthik running 64-bit major release  (build 9200)
+| Command      : report_utilization -hierarchical -file C:/KarDRIVE/Projects/ProjectFlash/util.rpt
+| Design       : top_v1
+| Device       : xc7z020clg400-1
+| Speed File   : -1
+| Design State : Synthesized
+---------------------------------------------------------------------------------------------------
+
+Utilization Design Information
+
+Table of Contents
+-----------------
+1. Utilization by Hierarchy
+
+1. Utilization by Hierarchy
+---------------------------
+
++------------+-------------+------------+------------+---------+------+------+--------+--------+------------+
+|  Instance  |    Module   | Total LUTs | Logic LUTs | LUTRAMs | SRLs |  FFs | RAMB36 | RAMB18 | DSP Blocks |
++------------+-------------+------------+------------+---------+------+------+--------+--------+------------+
+| top_v1     |       (top) |       1907 |       1873 |       0 |   34 | 2323 |     48 |      1 |         14 |
+|   (top_v1) |       (top) |          2 |          2 |       0 |    0 |   71 |     16 |      1 |          2 |
+|   u_conv   | conv_engine |        471 |        452 |       0 |   19 |  178 |      0 |      0 |          5 |
+|   u_dec    |    decision |         16 |         16 |       0 |    0 |    0 |      0 |      0 |          0 |
+|   u_fc     |     fc_unit |        262 |        247 |       0 |   15 |  271 |      0 |      0 |          2 |
+|   u_gap    |    gap_unit |        996 |        996 |       0 |    0 | 1689 |      0 |      0 |          2 |
+|   u_ram_a  |    fmap_ram |          0 |          0 |       0 |    0 |    0 |     16 |      0 |          0 |
+|   u_ram_b  |  fmap_ram_0 |         12 |         12 |       0 |    0 |    0 |     16 |      0 |          0 |
+|   u_seq    |   layer_seq |        165 |        165 |       0 |    0 |  114 |      0 |      0 |          3 |
++------------+-------------+------------+------------+---------+------+------+--------+--------+------------+
+
+

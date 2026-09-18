@@ -128,3 +128,10 @@ v1/vivado/
 #smoke
 v1/mem/smoke_28/
 v1/mem/v1_0/
+*.vvp
+tb_top.vvp
+
+# Synthesis/timing reports kept deliberately as a record of a specific run.
+# The blanket *.rpt rule above is for regenerable Vivado outputs; these are
+# checked-in evidence and must survive it.
+!docs/*.rpt
