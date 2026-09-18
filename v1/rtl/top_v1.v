@@ -29,7 +29,7 @@
 // explicitly forbids. line_buffer_v1 is built and independently verified
 // (see tb_line_buffer.v) and is ready for a future conv_engine revision
 // that takes a windowed input.
-`include "layer_table.vh"
+//`include "layer_table.vh"
 
 module top_v1 #(
     parameter WEIGHTS_FILE     = "../mem/v1_1/flash_v1_1/weights.mem",
