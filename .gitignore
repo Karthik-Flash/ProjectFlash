@@ -124,3 +124,7 @@ v1/mem/*/ProjectFlash_V1_*.ipynb
 # Vivado V1 project workspace (parallel to v0's ignore rule)
 verilog_v1/
 v1/vivado/
+
+#smoke
+v1/mem/smoke_28/
+v1/mem/v1_0/
