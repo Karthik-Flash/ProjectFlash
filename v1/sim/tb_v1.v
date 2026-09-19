@@ -275,10 +275,12 @@ module tb_v1;
 
     initial begin
         // 5e9 time units (25x the old 200e6) -- the v1_2 224x224 sweep needs
-        // ~2.5e9. Sized to 64 bits deliberately: an unsized decimal literal is
-        // 32 bits in most tools, and 5e9 > 2^32-1 would silently wrap to
-        // 705,032,704 and fire the timeout early.
-        #64'd5_000_000_000;
+        // ~2.5e9. Parenthesised deliberately: xsim's xvlog rejects a bare
+        // sized literal here (VRFC 10-4982 syntax error, after warning that
+        // 'd5_000_000_000 truncates to 32 bits), while the parenthesised
+        // form parses on both xsim and iverilog and keeps the full value --
+        // 5e9 > 2^32-1, so a truncated literal would fire the timeout early.
+        #(5_000_000_000);
         $display("RESULT: FAIL  (timeout)");
         $finish;
     end
