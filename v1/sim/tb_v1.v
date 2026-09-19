@@ -273,15 +273,16 @@ module tb_v1;
         $finish;
     end
 
-    initial begin
-        // 5e9 time units (25x the old 200e6) -- the v1_2 224x224 sweep needs
-        // ~2.5e9. Parenthesised deliberately: xsim's xvlog rejects a bare
-        // sized literal here (VRFC 10-4982 syntax error, after warning that
-        // 'd5_000_000_000 truncates to 32 bits), while the parenthesised
-        // form parses on both xsim and iverilog and keeps the full value --
-        // 5e9 > 2^32-1, so a truncated literal would fire the timeout early.
-        #(5_000_000_000);
-        $display("RESULT: FAIL  (timeout)");
+// Timeout in clock cycles, not raw # delay -- immune to timescale.
+    // Budget: ~32M cycles for the full 16-image v1_2 sweep; 4x headroom.
+    initial begin : timeout_block
+        integer to_cycles;
+        to_cycles = 0;
+        while (to_cycles < 1_024_000_000) begin
+            @(posedge clk);
+            to_cycles = to_cycles + 1;
+        end
+        $display("RESULT: FAIL  (timeout at %0d cycles)", to_cycles);
         $finish;
     end
 
