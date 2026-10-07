@@ -39,12 +39,17 @@ powershell -ExecutionPolicy Bypass -File v1\board\make_board_bundle.ps1
 Then copy the `board_bundle` folder to the board over SMB:
 
 - Explorer → `\\192.168.2.99\xilinx` (user `xilinx`, password `xilinx`)
-- Create `flash_v1_2\` there and copy the contents of `board_bundle\` into it.
+- Copy the contents of `board_bundle\` into
+  `\\192.168.2.99\xilinx\jupyter_notebooks\flash_v1_2\` (create the folder).
+
+Fallback if SMB does not work: in JupyterLab, upload `board_bundle.zip` (repo
+root) into `jupyter_notebooks/`, then in a JupyterLab terminal run
+`cd ~/jupyter_notebooks && unzip board_bundle.zip -d flash_v1_2`.
 
 ## 5. Run
 
 1. Browser → <http://192.168.2.99:9090>, password `xilinx`.
-2. Open `flash_v1_2\flash_v1_2_board.ipynb`, run all cells.
+2. Open `flash_v1_2/flash_v1_2_board.ipynb`, run all cells.
 3. Expected: `VERSION OK`, `BOARD: 244/244 bit-exact`, CYCLES = 12,196,126 per image
    (xsim value), i.e. ~183 ms/image at FCLK0 = 66.666672 MHz.
 

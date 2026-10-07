@@ -2,7 +2,7 @@
 #
 # Run from anywhere:  powershell -ExecutionPolicy Bypass -File v1\board\make_board_bundle.ps1
 # Output: <repo>\board_bundle\ (gitignored). Copy the whole folder to the board,
-# e.g. to \\192.168.2.99\xilinx\flash_v1_2\ .
+# to \\192.168.2.99\xilinx\jupyter_notebooks\flash_v1_2\ .
 #
 #   board_bundle\
 #     flash.bit, flash.hwh              overlay (same basename, PYNQ needs both)
