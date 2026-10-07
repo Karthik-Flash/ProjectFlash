@@ -1,5 +1,21 @@
 # V1.2 Synthesis Results (224x224)
 
+> **CORRECTION (2026-10-07): the numbers below are superseded.** This run did
+> not load the V1.2 model. `top_v1.v`'s parameter defaults still pointed at
+> the v1_1 export (only `tb_v1` overrode them), and the synthesis log shows:
+>
+> ```
+> INFO: [Synth 8-3876] $readmem data file '../mem/v1_1/flash_v1_1/weights.mem' is read successfully [C:/KarDRIVE/Projects/ProjectFlash/v1/rtl/top_v1.v:110]
+> INFO: [Synth 8-3876] $readmem data file '../mem/v1_1/flash_v1_1/bias.mem' is read successfully [C:/KarDRIVE/Projects/ProjectFlash/v1/rtl/top_v1.v:111]
+> INFO: [Synth 8-3876] $readmem data file '../mem/v1_1/flash_v1_1/layer_table.mem' is read successfully [C:/KarDRIVE/Projects/ProjectFlash/v1/rtl/layer_seq.v:48]
+> ```
+>
+> The RTL and RAM sizes were V1.2 (128 KB `fmap_ram`), so the numbers are
+> structurally close, but the ROM contents were V1.1's. A re-run with the
+> V1.2 files replaces them (see the section added below). The original
+> reports are kept in `docs/archive/`. The xsim 16/16 PASS is not affected:
+> `tb_v1` overrides the paths.
+
 Target: PYNQ-Z2, xc7z020-clg400-1, sys_clk 75 MHz (13.333 ns period).
 Vivado 2022.2, synthesis run against RTL at commit 57126bc (fmap_ram
 widened to 128 KB) plus tb/timeout follow-ups on main. Constraints

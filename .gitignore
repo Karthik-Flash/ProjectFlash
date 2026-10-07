@@ -135,3 +135,9 @@ tb_top.vvp
 # The blanket *.rpt rule above is for regenerable Vivado outputs; these are
 # checked-in evidence and must survive it.
 !docs/*.rpt
+
+# ---- V1.2 hardware bring-up ----
+# Superseded reports kept as evidence in the docs archive
+!docs/archive/*.rpt
+# Board bundle is assembled locally by v1/board/make_board_bundle.ps1
+board_bundle/

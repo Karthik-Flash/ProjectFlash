@@ -29,10 +29,19 @@ per-image expected logits/margin/decision. The 244 `img_*.mem`, 60 trace files,
 `model_state.pt` and report figures regenerate from the notebook and stay out
 (v1_2 vectors alone are ~50 MB).
 
-Committed per stage: 47,432 int8 weights, 170 int32 biases, a 7-line layer table,
-**shared across v1_1 and v1_2**. Only `IMG_H/W`, conv4/5 shift, `s_gap` and
-`DEFAULT_THRESHOLD` differ per stage. `9a1837e` adds the smoke-test directories to
-`.gitignore`.
+Committed per stage: 47,432 int8 weights, 170 int32 biases, a 7-line layer table.
+The two stages share the same RTL and the same weight-array shape, but **each
+stage was trained separately, so the weight values differ**:
+
+| File | SHA-256 |
+|---|---|
+| `v1/mem/v1_1/flash_v1_1/weights.mem` | `49EC63B1D9E9D2B12B6F4D0D1955B4BBC01AC14E6AF4A644844643BDFA1C2D00` |
+| `v1/mem/v1_2/flash_v1_2/weights.mem` | `0C29226E41EBDFEFB018BE1F19F9ADCF703E1D895FD39E89EBCD21EDB3B89E05` |
+
+The message of `c0549f8` says the weights are "shared across v1_1 and v1_2". That
+is wrong: only the shape is shared. In the layer table, `IMG_H/W`, conv4/5 shift,
+`s_gap` and `DEFAULT_THRESHOLD` differ per stage. `9a1837e` adds the smoke-test
+directories to `.gitignore`.
 
 ## Step 3 — RTL bring-up, module by module (merged in `b3cabca`)
 

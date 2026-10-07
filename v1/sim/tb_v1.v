@@ -274,7 +274,8 @@ module tb_v1;
     end
 
 // Timeout in clock cycles, not raw # delay -- immune to timescale.
-    // Budget: ~32M cycles for the full 16-image v1_2 sweep; 4x headroom.
+    // Budget: measured ~196M cycles for the full 16-image v1_2 sweep
+    // (~12.2M per image); 1,024,000,000 gives ~5x headroom.
     initial begin : timeout_block
         integer to_cycles;
         to_cycles = 0;
