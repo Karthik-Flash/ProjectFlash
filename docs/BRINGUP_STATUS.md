@@ -1,14 +1,12 @@
 # V1.2 Hardware Bring-up — Status (unattended run, 2026-10-07)
 
-> **IMPORTANT — the bitstream was built in a FALLBACK project, not in
-> `verilog/ProjectFlashV1/ProjectFlashV1.xpr`.**
-> At the start of the run the Vivado GUI (PID 33980, started 20:56) had
-> `ProjectFlashV1.xpr` open (its journal shows
-> `open_project C:/KarDRIVE/Projects/ProjectFlash/verilog/ProjectFlashV1/ProjectFlashV1.xpr`).
-> Writing to a project that the GUI holds would be overwritten by the GUI, so
-> Phase 5 ran in **`verilog/ProjectFlashV1_hw/ProjectFlashV1_hw.xpr`**, as the
-> rules require. The original project was not modified (only backed up). Open
-> the fallback project to see the completed runs.
+> **Main Vivado project: `verilog/ProjectFlashV1_hw/ProjectFlashV1_hw.xpr`.**
+> It holds the block design, the completed runs and the bitstream, and further
+> work happens there. It was created during this run as the fallback, because
+> the Vivado GUI (PID 33980) had `verilog/ProjectFlashV1/ProjectFlashV1.xpr`
+> open. Writing to a project the GUI holds would be overwritten by the GUI.
+> `ProjectFlashV1` was left unchanged (backed up) and is now legacy: it is the
+> bare `top_v1` project and cannot be implemented (98 IO pins).
 
 **Outcome:** all seven phases are done. The wrapper passes xsim
 (33/33 checks). The bitstream meets timing at **FCLK0 = 66.666672 MHz**
@@ -209,36 +207,6 @@ specificity 0.467). The board should reproduce exactly these numbers.
 
 ---
 
-## What to do next
-
-1. **Vivado check (5 min).**
-   - In the GUI that is already open: *File → Project → Open*
-     `verilog/ProjectFlashV1_hw/ProjectFlashV1_hw.xpr`.
-   - Expect `synth_1` and `impl_1` complete, `flash_bd` with 5 blocks plus
-     interconnects, top `flash_bd_wrapper`.
-   - *Open Implemented Design → Report Timing Summary*: WNS +0.206 ns.
-   - Optional: re-run the wrapper sim with `v1\scripts\sim_tb_v1_axi.bat`
-     (~2 min).
-2. **Decide what to do with `ProjectFlashV1`.** It is unchanged. Either keep
-   `ProjectFlashV1_hw` as the hardware project, or close the GUI and run, from
-   the repo root:
-   ```
-   C:\Xilinx\Vivado\2022.2\bin\vivado.bat -mode batch -source v1/scripts/build_hw.tcl -tclargs verilog/ProjectFlashV1/ProjectFlashV1.xpr 70.0
-   ```
-   to put the same block design and bitstream into the original project
-   (~10 min). It overwrites `v1/board/flash.*` and `docs/V1_impl_*` with an
-   equivalent build.
-3. **Board.** Follow `v1/board/README.md`:
-   - SD image PYNQ-Z2 v3.0.1, boot jumper SD, USB power, PC on
-     `192.168.2.1/24`.
-   - Copy `board_bundle\` to `\\192.168.2.99\xilinx\flash_v1_2\`.
-   - Open <http://192.168.2.99:9090> (password `xilinx`) and run all cells
-     of `flash_v1_2_board.ipynb`.
-4. **Record** the results in `docs/V1_board_results_v1_2.md`. Then
-   `git tag v1.2-hw` and `git push origin --tags`.
-
----
-
 ## Open issues / things I was unsure about
 
 - **Latency is ~183 ms/image, not the ~165 ms in the handoff,** because FCLK0
@@ -256,7 +224,7 @@ specificity 0.467). The board should reproduce exactly these numbers.
   user value 10 vs propagated 71/66). These are bookkeeping parameters. The
   interface clocks are driven by FCLK0, and timing is analysed on
   `clk_fpga_0`. Harmless, but a clean-up candidate.
-- **`tb_v1` in the fallback project** (sim top, as asked) uses relative
+- **`tb_v1` in `ProjectFlashV1_hw`** (sim top, as asked) uses relative
   `../mem/...` paths. Run inside the project's xsim it needs the `.mem` files
   next to the run directory, as before. `tb_v1_axi` uses absolute paths and
   runs anywhere.

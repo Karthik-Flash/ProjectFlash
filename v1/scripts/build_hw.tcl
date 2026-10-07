@@ -4,10 +4,10 @@
 #   C:\Xilinx\Vivado\2022.2\bin\vivado.bat -mode batch -notrace ^
 #       -source v1/scripts/build_hw.tcl -tclargs <project.xpr> [fclk_max_mhz]
 #
-# <project.xpr> : normally verilog/ProjectFlashV1/ProjectFlashV1.xpr. If the
-#                 file does not exist, a project is created there with the same
-#                 part/board and the v1 sources (used as the fallback when the
-#                 main project is open in the GUI).
+# <project.xpr> : the main project is verilog/ProjectFlashV1_hw/ProjectFlashV1_hw.xpr.
+#                 If the file does not exist, a project is created there with
+#                 the PYNQ-Z2 part/board and the v1 sources. Close the project in
+#                 the GUI first: the GUI overwrites changes made behind its back.
 # fclk_max_mhz  : FCLK0 ceiling, default 75.0 (see create_bd.tcl).
 #
 # Steps: add top_v1_axi.v (sources_1) and tb_v1_axi.v (sim_1, tb_v1 stays the
