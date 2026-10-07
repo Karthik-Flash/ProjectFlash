@@ -141,3 +141,7 @@ tb_top.vvp
 !docs/archive/*.rpt
 # Board bundle is assembled locally by v1/board/make_board_bundle.ps1
 board_bundle/
+# Vivado's PS7 IP writes NA/ps7_summary.html into the batch working directory
+/NA/
+# The board overlay is committed deliberately (4 MB); other *.bit stay ignored
+!v1/board/flash.bit
