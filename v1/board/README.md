@@ -43,8 +43,16 @@ Then copy the `board_bundle` folder to the board over SMB:
   `\\192.168.2.99\xilinx\jupyter_notebooks\flash_v1_2\` (create the folder).
 
 Fallback if SMB does not work: in JupyterLab, upload `board_bundle.zip` (repo
-root) into `jupyter_notebooks/`, then in a JupyterLab terminal run
-`cd ~/jupyter_notebooks && unzip board_bundle.zip -d flash_v1_2`.
+root) into `jupyter_notebooks/`, then in a JupyterLab terminal run (Python's
+built-in zip module, no `unzip` needed):
+
+```bash
+cd ~/jupyter_notebooks && python3 -m zipfile -t board_bundle.zip && python3 -m zipfile -e board_bundle.zip flash_v1_2/ && ls flash_v1_2 && ls flash_v1_2/vectors | wc -l
+```
+
+`-t` checks every file's CRC first (catches a truncated upload); nothing is
+extracted if it fails. Expect `flash.bit flash.hwh flash_v1_2_board.ipynb
+tools vectors` and a count of `249` (244 images + 5 expectation/label files).
 
 ## 5. Run
 
