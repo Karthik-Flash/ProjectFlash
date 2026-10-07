@@ -32,9 +32,9 @@
 //`include "layer_table.vh"
 
 module top_v1 #(
-    parameter WEIGHTS_FILE     = "../mem/v1_1/flash_v1_1/weights.mem",
-    parameter BIAS_FILE        = "../mem/v1_1/flash_v1_1/bias.mem",
-    parameter LAYER_TABLE_FILE = "../mem/v1_1/flash_v1_1/layer_table.mem"
+    parameter WEIGHTS_FILE     = "../mem/v1_2/flash_v1_2/weights.mem",
+    parameter BIAS_FILE        = "../mem/v1_2/flash_v1_2/bias.mem",
+    parameter LAYER_TABLE_FILE = "../mem/v1_2/flash_v1_2/layer_table.mem"
 ) (
     input  wire               clk,
     input  wire               rst,

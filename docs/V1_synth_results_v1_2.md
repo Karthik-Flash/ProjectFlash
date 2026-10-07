@@ -12,15 +12,53 @@
 >
 > The RTL and RAM sizes were V1.2 (128 KB `fmap_ram`), so the numbers are
 > structurally close, but the ROM contents were V1.1's. A re-run with the
-> V1.2 files replaces them (see the section added below). The original
-> reports are kept in `docs/archive/`. The xsim 16/16 PASS is not affected:
-> `tb_v1` overrides the paths.
+> V1.2 files replaces them (next section). The original reports are kept in
+> `docs/archive/`. The xsim 16/16 PASS is not affected: `tb_v1` overrides
+> the paths.
+
+## Current numbers — re-run with the V1.2 files (2026-10-07)
+
+`top_v1.v` parameter defaults now point at `../mem/v1_2/flash_v1_2/`.
+Non-project batch synthesis: `v1/scripts/synth_top_v1.tcl` (all `v1/rtl/*.v`
+except `line_buffer_v1.v` and `top_v1_axi.v`, include dir
+`v1/mem/v1_2/flash_v1_2`, `v1/constr/v1.xdc`, `synth_design -top top_v1
+-part xc7z020clg400-1`). Vivado 2022.2. Reports: `V1_synth_timing_v1_2.rpt`,
+`V1_synth_util_v1_2.rpt` (these replace the earlier ones).
+
+Files loaded, from the log (no `Synth 8-4445`):
+
+```
+INFO: [Synth 8-3876] $readmem data file '../mem/v1_2/flash_v1_2/weights.mem' is read successfully [C:/KarDRIVE/Projects/ProjectFlash/v1/rtl/top_v1.v:110]
+INFO: [Synth 8-3876] $readmem data file '../mem/v1_2/flash_v1_2/bias.mem' is read successfully [C:/KarDRIVE/Projects/ProjectFlash/v1/rtl/top_v1.v:111]
+INFO: [Synth 8-3876] $readmem data file '../mem/v1_2/flash_v1_2/layer_table.mem' is read successfully [C:/KarDRIVE/Projects/ProjectFlash/v1/rtl/layer_seq.v:48]
+```
+
+| Metric | V1.2 files (current) | v1_1 files (superseded) |
+|---|---|---|
+| WNS @ 75 MHz | +0.085 ns | +0.085 ns |
+| WHS | +0.079 ns | +0.079 ns |
+| Failing endpoints (setup / hold) | 0 / 0 | 0 / 0 |
+| Total endpoints | 9,477 | 9,439 |
+| LUT | 2,675 (2,640 logic + 35 memory) | 2,006 |
+| FF | 2,845 | 2,840 |
+| DSP48 | 14 | 14 |
+| BRAM36 / BRAM18 | 80 / 1 (57.5% BRAM tiles) | 80 / 1 |
+
+Critical path is unchanged: `u_conv/y_reg[1]/C` ->
+`u_ram_a/mem_reg_0_0/ADDRBWRADDR[0]`, 11 logic levels (CARRY4=7, DSP48E1=1,
+LUT2=1, LUT4=1, LUT5=1), data path 12.502 ns.
+
+The LUT count rises by 669 because the weight ROM is built from the actual
+V1.2 weight values; the logic that implements a constant ROM depends on its
+contents. Timing and BRAM do not change.
+
+## Superseded analysis (v1_1 files loaded) — kept for the record
 
 Target: PYNQ-Z2, xc7z020-clg400-1, sys_clk 75 MHz (13.333 ns period).
 Vivado 2022.2, synthesis run against RTL at commit 57126bc (fmap_ram
 widened to 128 KB) plus tb/timeout follow-ups on main. Constraints
-from `v1/constr/v1.xdc`. Full reports: `V1_synth_timing_v1_2.rpt`,
-`V1_synth_util_v1_2.rpt`.
+from `v1/constr/v1.xdc`. Reports now in `docs/archive/`
+(`V1_synth_*_v1_2_v1_1mem_superseded.rpt`).
 
 ## Timing
 
