@@ -4,8 +4,10 @@ Files here:
 
 | File | What |
 |---|---|
-| `flash.bit`, `flash.hwh` | Overlay built by `v1/scripts/build_hw.tcl`. PYNQ needs both, with the same basename. |
-| `flash_v1_2_board.ipynb` | Board notebook: VERSION check, 244-image bit-exact sweep, latency, threshold demo, small-sample sens/spec. |
+| `flash_hp64.bit`, `.hwh` | **V1.2.1 overlay (default).** HP0 and DMA memory side 64-bit. Built by `v1/scripts/build_hw.tcl`. |
+| `flash_hp32.bit`, `.hwh` | V1.2 overlay, HP0 32-bit. Kept for the AFI confirmation test (see `docs/V1_board_debug_log.md`). |
+| `flash.bit`, `flash.hwh` | Legacy name of the V1.2 overlay, byte-identical to `flash_hp32.*`. Not in the bundle. |
+| `flash_v1_2_board.ipynb` | Board notebook: `BIT` selects the overlay, HP0 AFI width check (read only), optional `AFI_FORCE` cell (off), VERSION check, 244-image bit-exact sweep, latency, threshold demo, small-sample sens/spec. PYNQ needs each `.bit` with its `.hwh` of the same basename. |
 | `make_board_bundle.ps1` | Builds `board_bundle/` (gitignored) with everything the board needs. |
 
 ## 1. SD card (once)
