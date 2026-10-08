@@ -53,8 +53,9 @@ cd ~/jupyter_notebooks && python3 -m zipfile -t board_bundle.zip && python3 -m z
 ```
 
 `-t` checks every file's CRC first (catches a truncated upload); nothing is
-extracted if it fails. Expect `flash.bit flash.hwh flash_v1_2_board.ipynb
-tools vectors` and a count of `249` (244 images + 5 expectation/label files).
+extracted if it fails. Expect `flash_hp32.bit flash_hp32.hwh flash_hp64.bit
+flash_hp64.hwh flash_v1_2_board.ipynb tools vectors` and a count of `249`
+(244 images + 5 expectation/label files).
 
 ## 5. Run
 
