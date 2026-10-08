@@ -265,3 +265,61 @@ prediction:
 Running total for the `dup_even` model: **244/244 images, 24/24 probes
 exact.** The fix (V1.2.1) is HP0 and the DMA memory side at 64 bits; see the
 next entry.
+
+---
+
+## 2026-10-08 — V1.2.1 build: HP0 and DMA memory side at 64 bits
+
+RTL unchanged. Only the block design changed (`v1/scripts/create_bd.tcl`,
+commit `2791452`):
+
+| | V1.2 (`flash_hp32`) | V1.2.1 (`flash_hp64`) |
+|---|---|---|
+| `PCW_S_AXI_HP0_DATA_WIDTH` | 32 | **64** |
+| `axi_dma_0` `C_M_AXI_MM2S_DATA_WIDTH` | 32 | **64** |
+| `C_M_AXIS_MM2S_TDATA_WIDTH` / `C_SG_LENGTH_WIDTH` / SG | 32 / 26 / off | 32 / 26 / off |
+| DMA -> HP0 path | `axi_mem_intercon` (auto_pc) | `axi_mem_intercon` (auto_pc only, no width converter) |
+| FCLK0 | 66.666672 MHz | 66.666672 MHz |
+
+- A direct `M_AXI_MM2S` -> `S_AXI_HP0` connection is refused
+  (`[BD 41-1285]` AXI4 vs AXI3), so the interconnect stays. It now holds only
+  the AXI4 -> AXI3 protocol converter.
+- BD 41-702 (`PCW_M_AXI_GP0/S_AXI_HP0_FREQMHZ` = 10) was not cleaned up: both
+  parameters are read-only (`[BD 41-737]`). The warning is harmless.
+
+Build: `build_hw.tcl verilog/ProjectFlashV1_hw/ProjectFlashV1_hw.xpr 70.0 flash_hp64`,
+one attempt.
+
+| | `flash_hp32` (V1.2) | `flash_hp64` (V1.2.1) |
+|---|---|---|
+| Post-route WNS / WHS | +0.206 / +0.024 ns | **+0.314 / +0.030 ns** |
+| Failing endpoints | 0 of 15,320 | **0 of 15,451** |
+| LUT / FF | 3,818 / 4,745 | 3,864 / 4,766 |
+| RAMB36 / RAMB18 / DSP | 81 / 1 / 14 | 81 / 2 / 14 |
+| Power estimate | 1.492 W | 1.494 W (PS7 1.256 W) |
+| `.bit` SHA-256 prefix | `396a219b10690f26` | **`0ee58d6c924cd162`** |
+| `.hwh` SHA-256 prefix | `5f8c18af7bdf3650` | **`7011237c69968c86`** |
+| `.hwh` HP0 width | 32 | **64** (`PCW_S_AXI_HP0_DATA_WIDTH`, `C_S_AXI_HP0_DATA_WIDTH`) |
+
+The critical path is unchanged in kind (`u_conv/fm_rd_addr3` DSP chain ->
+`u_ram_a` address, 13.786 ns). Reports:
+`docs/V1_impl_{timing,util,power}_v1_2_hp64.rpt`.
+
+**Which `.mem` files are in the accelerator.** This build has no fresh
+`$readmem` lines. Vivado's IP cache reused the accelerator netlist (cache
+entry `769717134cc93638`), so the module-reference synthesis run did not
+execute. That cache entry was written by the 2026-10-07 22:17 run, the
+`flash_hp32` build, whose log showed `Synth 8-3876` for the three absolute
+v1_2 files and no `8-4445` (recorded in `BRINGUP_STATUS.md`). The functional
+netlists of the two builds have identical contents: all 2,274 `INIT_xx`
+lines (BRAM/ROM contents: weights, biases, layer table) match. That same
+netlist ran on the board and matched golden-v1_2 on 244/244 images under the
+`dup_even` model. So the `flash_hp64` accelerator contains the v1_2 model.
+
+**Next on the board (2026-10-09):**
+
+1. `BIT = 'flash_hp64.bit'`, `AFI_FORCE = False`. Expect the AFI check to
+   print `OK` (AFI 64-bit, `.hwh` 64) and the sweep to give 244/244.
+2. Confirmation of the root cause: `BIT = 'flash_hp32.bit'`.
+   - With `AFI_FORCE = False`, expect `MISMATCH` and the old 0/244.
+   - With `AFI_FORCE = True`, expect 244/244.
