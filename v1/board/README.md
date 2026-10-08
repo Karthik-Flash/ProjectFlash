@@ -8,6 +8,7 @@ Files here:
 | `flash_hp32.bit`, `.hwh` | V1.2 overlay, HP0 32-bit. Kept for the AFI confirmation test (see `docs/V1_board_debug_log.md`). |
 | `flash.bit`, `flash.hwh` | Legacy name of the V1.2 overlay, byte-identical to `flash_hp32.*`. Not in the bundle. |
 | `flash_v1_2_board.ipynb` | Board notebook: `BIT` selects the overlay, HP0 AFI width check (read only), optional `AFI_FORCE` cell (off), VERSION check, 244-image bit-exact sweep, latency, threshold demo, small-sample sens/spec. PYNQ needs each `.bit` with its `.hwh` of the same basename. |
+| `make_notebook.py` | Generates `flash_v1_2_board.ipynb`. Edit cells there, not in the `.ipynb`; usage in its docstring. |
 | `make_board_bundle.ps1` | Builds `board_bundle/` (gitignored) with everything the board needs. |
 
 ## 1. SD card (once)
