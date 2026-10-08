@@ -9,6 +9,9 @@
 #     flash_hp32.bit, flash_hp32.hwh    V1.2 overlay, HP0 32-bit (AFI confirmation test)
 #     flash_v1_2_board.ipynb            board notebook (BIT selects the overlay)
 #     tools\flash_preprocess.py         DICOM -> uint8 preprocessing contract
+#     tools\golden_model_v1.py          NumPy golden model (ARM baseline cell)
+#     model\weights.mem, bias.mem,      v1_2 export read by the golden model
+#           layer_table.mem, layer_table.json
 #     vectors\img_0..243.mem            244 verification images (224x224 uint8)
 #     vectors\exp_*.mem, gt_label.mem   golden-model expectations + labels
 
@@ -26,9 +29,12 @@ $imgs = Get-ChildItem (Join-Path $export 'vectors') -Filter 'img_*.mem'
 if ($imgs.Count -ne 244) { throw "expected 244 img_*.mem in $export\vectors, found $($imgs.Count)" }
 
 if (Test-Path $out) { Remove-Item -Recurse -Force $out }
-New-Item -ItemType Directory -Force $out, "$out\tools", "$out\vectors" | Out-Null
+New-Item -ItemType Directory -Force $out, "$out\tools", "$out\model", "$out\vectors" | Out-Null
 $files | ForEach-Object { Copy-Item (Join-Path $board $_) $out -Force }
-Copy-Item (Join-Path $export 'tools\flash_preprocess.py') "$out\tools" -Force
+Copy-Item (Join-Path $export 'tools\flash_preprocess.py'), (Join-Path $export 'tools\golden_model_v1.py') "$out\tools" -Force
+foreach ($f in 'weights.mem', 'bias.mem', 'layer_table.mem', 'layer_table.json') {
+    Copy-Item (Join-Path $export $f) "$out\model" -Force
+}
 $imgs | Copy-Item -Destination "$out\vectors" -Force
 foreach ($f in 'exp_logit0.mem', 'exp_logit1.mem', 'exp_margin.mem', 'exp_decision.mem', 'gt_label.mem') {
     Copy-Item (Join-Path $export "vectors\$f") "$out\vectors" -Force

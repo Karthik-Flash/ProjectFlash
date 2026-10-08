@@ -54,15 +54,43 @@ cd ~/jupyter_notebooks && python3 -m zipfile -t board_bundle.zip && python3 -m z
 
 `-t` checks every file's CRC first (catches a truncated upload); nothing is
 extracted if it fails. Expect `flash_hp32.bit flash_hp32.hwh flash_hp64.bit
-flash_hp64.hwh flash_v1_2_board.ipynb tools vectors` and a count of `249`
+flash_hp64.hwh flash_v1_2_board.ipynb model tools vectors` and a count of `249`
 (244 images + 5 expectation/label files).
 
-## 5. Run
+## 5. Run — lab order
 
-1. Browser → <http://192.168.2.99:9090>, password `xilinx`.
-2. Open `flash_v1_2/flash_v1_2_board.ipynb`, run all cells.
-3. Expected: `VERSION OK`, `BOARD: 244/244 bit-exact`, CYCLES = 12,196,126 per image
-   (xsim value), i.e. ~183 ms/image at FCLK0 = 66.666672 MHz.
+Browser → <http://192.168.2.99:9090>, password `xilinx`, open
+`flash_v1_2/flash_v1_2_board.ipynb`. Each run saves
+`results_<basename>.csv` and `summary_<basename>.json` next to the notebook.
+
+**Run 1 — `flash_hp64` on a freshly booted board (the result that counts).**
+
+1. Power-cycle or reboot the board, so the AFI is in its boot state.
+2. Leave `BIT = 'flash_hp64.bit'` and `AFI_FORCE = False`. Run all cells.
+3. Expect:
+   - AFI check `OK` (bit 0 = 0, `.hwh` HP0 = 64)
+   - `VERSION OK`
+   - `BOARD: 244/244 bit-exact`
+   - CYCLES = 12,196,126, i.e. 182.9 ms/image compute at 66.666672 MHz
+   - TP 117 / FN 5 / TN 57 / FP 65
+   - ARM baseline assert passes
+4. Files: `results_flash_hp64.csv`, `summary_flash_hp64.json`.
+
+**Run 2 — `flash_hp32` root-cause confirmation (same boot).**
+
+1. *Kernel → Restart*. Set `BIT = 'flash_hp32.bit'`, keep `AFI_FORCE = False`,
+   run all cells. Expect AFI check `MISMATCH` and the old result: 0/244,
+   image 0 margin 125. Files: `results_flash_hp32.csv`, `summary_flash_hp32.json`.
+2. *Kernel → Restart*. Same `BIT`, set `AFI_FORCE = True`, run all cells.
+   Expect RDCHAN_CTRL `0x0 -> 0x1` and 244/244. Files:
+   `results_flash_hp32_afiforce.csv`, `summary_flash_hp32_afiforce.json`.
+
+**Then reboot the board.** `AFI_FORCE` changes a PS register that stays set
+until reboot. Any later `flash_hp64` run on the same boot would show
+`MISMATCH` and corrupted input.
+
+Download the six result files (Jupyter file browser → right-click →
+Download) and put them in `docs/board_runs/<date>/`.
 
 ## 6. Record
 
