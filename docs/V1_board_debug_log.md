@@ -188,3 +188,80 @@ constant-register warnings in `conv_engine`, `fmap_ram`, `layer_seq`,
 - To confirm on the board: the AFI0 `32BitEn` read above, plus `diag_2.json`
   against the prediction table.
 - Fix: not yet applied (this step was report only).
+
+---
+
+## 2026-10-08 — diag_2 from the board (`flash.bit` 396a219b10690f26)
+
+Board printout, verbatim:
+
+```
+diag_2 (board, 2026-10-08, flash.bit sha 396a219b10690f26)
+sha_bit                  396a219b10690f26
+sha_hwh                  5f8c18af7bdf3650
+sha_img0                 b646ab2d4af88b2e
+sha_exp_logit0           0d317dcf865a5210
+img0 fresh download      (-119, 6, 125, 1, 12196126)
+img0 after soft reset    (-119, 6, 125, 1, 12196126)
+img0 after const255      (-119, 6, 125, 1, 12196126)
+img0 after const0        (-119, 6, 125, 1, 12196126)
+img1                     (-109, 302, 411, 1, 12196126)
+img1 again               (-109, 302, 411, 1, 12196126)
+img0 thr 0               (-119, 6, 125, 1, 12196126)
+acc regs 0x00-0x24       ['0x0', '0x2', '0x0', '0xffffff89', '0x6', '0x7d', '0x1', '0xf1a50102', '0xba191e', '0x0']
+dma DMACR, DMASR         ['0x10003', '0x1002']
+top half 255             (-337, 635, 972, 1, 12196126)
+left half 255            (106, 446, 340, 1, 12196126)
+checker 1px              (-750, 1786, 2536, 1, 12196126)
+px(0,0)=255              (-375, 106, 481, 1, 12196126)
+px(0,1)=255              (-375, 106, 481, 1, 12196126)
+px(0,2)=255              (-375, 106, 481, 1, 12196126)
+px(0,3)=255              (-375, 106, 481, 1, 12196126)
+px(1,0)=255              (-349, 102, 451, 1, 12196126)
+px(112,112)=255          (-386, 114, 500, 1, 12196126)
+px(223,223)=255          (-375, 106, 481, 1, 12196126)
+```
+
+**File integrity.** All four SHA-256 prefixes match the repo
+(`v1/board/flash.bit`, `v1/board/flash.hwh`, `vectors/img_0.mem`,
+`vectors/exp_logit0.mem`). The board ran the intended bitstream on the
+intended data.
+
+**Repeatability.** Image 0 gives the same result fresh, after a soft reset,
+and after const-255 and const-0 runs. Image 1 is identical twice and equals
+the sweep value. There is no state carried between runs and no
+nondeterminism.
+
+**Registers after the last run** (image 0, THRESHOLD 0): CTRL 0, STATUS 0x2
+(done, no err), THRESHOLD 0, LOGIT0 0xffffff89 = -119, LOGIT1 6, MARGIN
+0x7d = 125, DECISION 1, VERSION 0xF1A50102, CYCLES 0xba191e = 12,196,126,
+0x24 reads 0 (unmapped). DMA MM2S DMACR 0x10003 (run, IRQ threshold 1),
+DMASR 0x1002 (idle, IOC flag set, no error bits).
+
+**Synthetic probes vs golden and vs the `dup_even` prediction** (made before
+the board data was seen, see above):
+
+| Probe | Golden | Predicted (dup_even) | Board | Board = prediction | Board = golden |
+|---|---|---|---|---|---|
+| top half 255 | -337, 635, 972 | -337, 635, 972 | -337, 635, 972 | yes | yes |
+| left half 255 | 106, 446, 340 | 106, 446, 340 | 106, 446, 340 | yes | yes |
+| checker | -750, 1786, 2536 | -750, 1786, 2536 | -750, 1786, 2536 | yes | yes |
+| px(0,0) | -375, 106, 481 | -375, 106, 481 | -375, 106, 481 | yes | yes |
+| px(0,1) | -375, 106, 481 | -375, 106, 481 | -375, 106, 481 | yes | yes |
+| px(0,2) | -375, 106, 481 | -375, 106, 481 | -375, 106, 481 | yes | yes |
+| px(0,3) | -375, 106, 481 | -375, 106, 481 | -375, 106, 481 | yes | yes |
+| px(1,0) | -375, 106, 481 | **-349, 102, 451** | **-349, 102, 451** | **yes** | no |
+| px(112,112) | -386, 114, 500 | -386, 114, 500 | -386, 114, 500 | yes | yes |
+| px(223,223) | -386, 114, 500 | **-375, 106, 481** | **-375, 106, 481** | **yes** | no |
+
+10/10 probes equal the prediction. The two probes where golden and
+prediction differ are the ones that discriminate, and the board follows the
+prediction:
+
+- px(1,0) is in word 56 (even), so the board also sees it at (1,4..7).
+- px(223,223) is in word 12543 (odd), so it is replaced by zeros and the
+  board returns the const-0 result.
+
+Running total for the `dup_even` model: **244/244 images, 24/24 probes
+exact.** The fix (V1.2.1) is HP0 and the DMA memory side at 64 bits; see the
+next entry.

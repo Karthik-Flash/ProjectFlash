@@ -145,3 +145,4 @@ board_bundle/
 /NA/
 # The board overlay is committed deliberately (4 MB); other *.bit stay ignored
 !v1/board/flash.bit
+!v1/board/flash_hp*.bit
