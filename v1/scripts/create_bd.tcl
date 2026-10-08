@@ -4,11 +4,17 @@
 # v1/rtl (incl. top_v1_axi.v). Can also be sourced from the Vivado Tcl console
 # of such a project. Replaces any existing flash_bd.
 #
-#   PS7 (board preset) -- FCLK_CLK0 <= 75 MHz, S_AXI_HP0 32-bit, IRQ_F2P
-#   axi_dma_0          -- no SG, MM2S only, 26-bit length, 32-bit stream
+#   PS7 (board preset) -- FCLK_CLK0 <= 75 MHz, S_AXI_HP0 64-bit, IRQ_F2P
+#   axi_dma_0          -- no SG, MM2S only, 26-bit length, 64-bit memory side,
+#                         32-bit stream
 #   top_v1_axi_0       -- module reference; s_axis <- DMA M_AXIS_MM2S
-#   M_AXI_GP0 -> {DMA S_AXI_LITE, top_v1_axi_0 s_axi}; DMA M_AXI_MM2S -> HP0
+#   M_AXI_GP0 -> {DMA S_AXI_LITE, top_v1_axi_0 s_axi}; DMA M_AXI_MM2S -> HP0 (AXI4->AXI3 interconnect)
 #   xlconcat {irq_done, mm2s_introut} -> IRQ_F2P
+#
+# V1.2.1: HP0 and the DMA memory side are 64-bit. With HP0 at 32-bit the board
+# returned every even 32-bit word twice (w0,w0,w2,w2,...): PYNQ leaves the HP0
+# AFI in 64-bit mode and does not re-run this design's ps7_init. 64-bit matches
+# the AFI's PYNQ default. See docs/V1_board_debug_log.md.
 #
 # Optional input:  ::flash_fclk_max  (MHz, default 75.0). FCLK0 is lowered
 # until the PS's ACTUAL frequency is <= this value.
@@ -35,7 +41,7 @@ apply_bd_automation -rule xilinx.com:bd_rule:processing_system7 \
 
 set_property -dict [list \
     CONFIG.PCW_USE_S_AXI_HP0 {1} \
-    CONFIG.PCW_S_AXI_HP0_DATA_WIDTH {32} \
+    CONFIG.PCW_S_AXI_HP0_DATA_WIDTH {64} \
     CONFIG.PCW_USE_FABRIC_INTERRUPT {1} \
     CONFIG.PCW_IRQ_F2P_INTR {1} \
     CONFIG.PCW_FPGA0_PERIPHERAL_FREQMHZ {75} \
@@ -65,7 +71,7 @@ set_property -dict [list \
     CONFIG.c_include_s2mm {0} \
     CONFIG.c_sg_length_width {26} \
     CONFIG.c_m_axis_mm2s_tdata_width {32} \
-    CONFIG.c_m_axi_mm2s_data_width {32} \
+    CONFIG.c_m_axi_mm2s_data_width {64} \
 ] $dma
 
 # ---- Accelerator (module reference) ------------------------------------
@@ -87,6 +93,9 @@ apply_bd_automation -rule xilinx.com:bd_rule:axi4 -config { \
     Master {/processing_system7_0/M_AXI_GP0} Slave {/top_v1_axi_0/s_axi} \
     ddr_seg {Auto} intc_ip {Auto} master_apm {0}} \
     [get_bd_intf_pins top_v1_axi_0/s_axi]
+# DMA (AXI4) -> HP0 (AXI3). A direct connect_bd_intf_net is refused
+# ([BD 41-1285] protocols incompatible), so automation inserts an interconnect
+# whose only job is the AXI4->AXI3 protocol conversion (both sides 64-bit).
 apply_bd_automation -rule xilinx.com:bd_rule:axi4 -config { \
     Clk_master {Auto} Clk_slave {Auto} Clk_xbar {Auto} \
     Master {/axi_dma_0/M_AXI_MM2S} Slave {/processing_system7_0/S_AXI_HP0} \
@@ -96,7 +105,7 @@ apply_bd_automation -rule xilinx.com:bd_rule:axi4 -config { \
 # Anything automation left unclocked/unreset goes to FCLK0 / its reset block.
 set fclk [get_bd_pins processing_system7_0/FCLK_CLK0]
 set rstn [get_bd_pins -of [get_bd_cells -filter {VLNV =~ "*proc_sys_reset*"}] -filter {NAME == peripheral_aresetn}]
-foreach pin [list top_v1_axi_0/aclk axi_dma_0/m_axi_mm2s_aclk axi_dma_0/s_axi_lite_aclk] {
+foreach pin [list top_v1_axi_0/aclk axi_dma_0/m_axi_mm2s_aclk axi_dma_0/s_axi_lite_aclk processing_system7_0/S_AXI_HP0_ACLK] {
     set p [get_bd_pins $pin]
     if {[llength [get_bd_nets -quiet -of $p]] == 0} { connect_bd_net $fclk $p }
 }
