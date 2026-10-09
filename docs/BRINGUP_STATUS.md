@@ -1,4 +1,25 @@
-# V1.2 Hardware Bring-up — Status (unattended run, 2026-10-07)
+# V1.2 Hardware Bring-up — Status
+
+> **STATUS: COMPLETE (2026-10-09).** The current hardware is **V1.2.1**
+> (`v1/board/flash_hp64.bit`, plus the LED variant `flash_hp64_led.bit`). It is
+> **bit-exact on all 244 verification images on the PYNQ-Z2**. Results:
+> [`V1_board_results_v1_2.md`](V1_board_results_v1_2.md). Full write-up:
+> [`PROJECT_FLASH_REPORT.md`](../PROJECT_FLASH_REPORT.md). What happened after
+> this bring-up run (the board failure, its root cause, the fix) is summarised
+> in the next section; the rest of the file is the record of the unattended
+> run of 2026-10-07. File names in it were updated where files moved later.
+
+## After the bring-up: board sessions of 2026-10-08 and 2026-10-09
+
+| Date | Event | Result | Evidence |
+|---|---|---|---|
+| 2026-10-08 | First board run of the V1.2 bitstream (HP0 32-bit; then `flash.bit`, now `flash_hp32.bit`) | **0/244** bit-exact; 234/244 decisions agree | `docs/board_runs/2026-10-08/` |
+| 2026-10-08 | Offline fault localisation with the golden model and 24 probes | `board == golden(dup_even(x))` on 244/244 images and 24/24 probes: HP0 AFI in 64-bit mode, PL port 32-bit | `docs/V1_board_debug_log.md` |
+| 2026-10-08 | V1.2.1 built: HP0 and DMA memory side 64-bit, RTL unchanged | WNS +0.314 ns, WHS +0.030 ns at 66.666672 MHz | `docs/reports/impl/*_v1_2_hp64.rpt` |
+| 2026-10-09 | Run 1 `flash_hp64`; run 2 `flash_hp32`; run 3 `flash_hp32` + one AFI register bit | **244/244**; 0/244; **244/244** (cause confirmed by intervention) | `docs/board_runs/2026-10-09/` |
+| 2026-10-09 | V1.2.1-led (`axi_gpio_led`) built and run in the live demo | WNS +0.344 ns; **244/244** re-verified on the board | `docs/board_runs/2026-10-09/demo_flash_hp64_led_executed.ipynb` |
+
+# V1.2 Hardware Bring-up — record of the unattended run, 2026-10-07
 
 > **Main Vivado project: `verilog/ProjectFlashV1_hw/ProjectFlashV1_hw.xpr`.**
 > It holds the block design, the completed runs and the bitstream, and further
@@ -99,13 +120,14 @@ All commits: author Karthik-Flash, no `Co-Authored-By` trailer (checked with
     `.rpt` files, `V1_CHANGELOG`, `PROJECT_NARRATIVE`, the brief `.md`,
     `HANDOFF_v1_impl_v2.md`, `V1_board_results_v1_2.md`, this file.
 12. **`.gitignore` additions:** `board_bundle/`, `!docs/archive/*.rpt`,
-    `/NA/`, `!v1/board/flash.bit`. `*.vvp`, `*.jou`, `*.log`, `*.str`,
+    `/NA/`, `!v1/board/flash.bit` (removed on 2026-10-09 with the file). `*.vvp`, `*.jou`, `*.log`, `*.str`,
     `.Xil/` and `xsim.dir/` were already covered. No build artifacts were
     tracked. `/NA/` is there because Vivado's PS7 IP writes
     `NA/ps7_summary.html` into the batch working directory (moved to
     `verilog/build_hw_log/NA_ps7_summary/`).
 13. **`flash.bit` is committed** (4,045,676 bytes, under the 10 MB limit),
-    together with `flash.hwh`.
+    together with `flash.hwh`. *(2026-10-09: renamed `flash_hp32.bit/.hwh`;
+    the byte-identical `flash.bit/.hwh` were removed.)*
 14. **Testbench fix during Phase 4.** First xsim run: timeout with no image
     finished. Cause: a bug in my testbench. `send_stream` waited one extra
     negedge after raising `tvalid`, so a beat whose `tready` was already high
@@ -172,8 +194,8 @@ INFO: [Synth 8-3876] $readmem data file 'c:/KarDRIVE/Projects/ProjectFlash/v1/me
 INFO: [Synth 8-3876] $readmem data file 'c:/KarDRIVE/Projects/ProjectFlash/v1/mem/v1_2/flash_v1_2/layer_table.mem' is read successfully [C:/KarDRIVE/Projects/ProjectFlash/v1/rtl/layer_seq.v:48]
 ```
 
-Reports: `docs/V1_impl_timing_v1_2.rpt`, `docs/V1_impl_util_v1_2.rpt`,
-`docs/V1_impl_power_v1_2.rpt`.
+Reports: `docs/reports/impl/V1_impl_timing_v1_2.rpt`, `V1_impl_util_v1_2.rpt`,
+`V1_impl_power_v1_2.rpt`.
 
 ### Address map (PS `M_AXI_GP0`)
 
@@ -187,16 +209,16 @@ Interrupts: `IRQ_F2P[0]` = `irq_done`, `IRQ_F2P[1]` = `mm2s_introut`.
 
 ### Bitstream
 
-- `v1/board/flash.bit`: 4,045,676 bytes, SHA-256 prefix `396a219b10690f26`.
+- `v1/board/flash.bit` (now `v1/board/flash_hp32.bit`): 4,045,676 bytes, SHA-256 prefix `396a219b10690f26`.
   Source: `verilog/ProjectFlashV1_hw/ProjectFlashV1_hw.runs/impl_1/flash_bd_wrapper.bit`.
-- `v1/board/flash.hwh`: from `ProjectFlashV1_hw.gen/sources_1/bd/flash_bd/hw_handoff/flash_bd.hwh`.
+- `v1/board/flash.hwh` (now `flash_hp32.hwh`): from `ProjectFlashV1_hw.gen/sources_1/bd/flash_bd/hw_handoff/flash_bd.hwh`.
   It shows `PCW_FPGA0_PERIPHERAL_FREQMHZ = 66.666672`.
 - XSA: `verilog/ProjectFlashV1_hw/flash_bd_wrapper.xsa` (gitignored).
 
 ### Board package
 
 `v1/board/make_board_bundle.ps1` builds `board_bundle/` (gitignored, 253
-files, 50.9 MB): `flash.bit`, `flash.hwh`, `flash_v1_2_board.ipynb`,
+files, 50.9 MB): `flash.bit`, `flash.hwh` (now `flash_hp32.*`), `flash_v1_2_board.ipynb`,
 `tools/flash_preprocess.py`, `vectors/` (244 `img_*.mem`, `exp_logit0/1`,
 `exp_margin`, `exp_decision`, `gt_label`). The bundle has already been built
 once and is in place now.
@@ -207,7 +229,13 @@ specificity 0.467). The board should reproduce exactly these numbers.
 
 ---
 
-## Open issues / things I was unsure about
+## Open issues / things I was unsure about (2026-10-07; outcome added 2026-10-09)
+
+*Outcome:* the 66.67 MHz clock was kept for V1 (pipelining the conv address
+path is V2 work); the notebook's FCLK0 check read 66.666667 MHz on the
+board; `BD 41-702` turned out not to be fixable in one line (the parameters
+are read-only, `[BD 41-737]`). The one issue nobody listed here, the HP0 AFI
+width, is the one that broke the first board run.
 
 - **Latency is ~183 ms/image, not the ~165 ms in the handoff,** because FCLK0
   is 66.67 MHz instead of 75 MHz. The 75 MHz standalone synthesis slack

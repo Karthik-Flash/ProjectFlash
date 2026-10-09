@@ -323,3 +323,40 @@ netlist ran on the board and matched golden-v1_2 on 244/244 images under the
 2. Confirmation of the root cause: `BIT = 'flash_hp32.bit'`.
    - With `AFI_FORCE = False`, expect `MISMATCH` and the old 0/244.
    - With `AFI_FORCE = True`, expect 244/244.
+
+---
+
+## Resolved — 2026-10-09: root cause confirmed by intervention, V1.2.1 verified
+
+**Status: closed.** Results document:
+[`V1_board_results_v1_2.md`](V1_board_results_v1_2.md). Evidence:
+[`board_runs/2026-10-09/`](board_runs/2026-10-09/README.md).
+
+Three runs on one boot (PYNQ 3.1.1, FCLK0 66.666667 MHz):
+
+| Run | Bitstream | AFI RDCHAN_CTRL bit 0 | AFI vs `.hwh` | Bit-exact |
+|---|---|---|---|---|
+| 1 | `flash_hp64` (HP0 64-bit) | 0 | OK | **244/244** |
+| 2 | `flash_hp32` (HP0 32-bit, the 2026-10-08 bitstream) | 0 | MISMATCH | **0/244** |
+| 3 | `flash_hp32` + `AFI_FORCE` (bit 0 written 0 → 1) | 1 | forced to match | **244/244** |
+
+- **The cause is confirmed by intervention, not just by fit.** Runs 2 and 3
+  use the same bitstream on the same boot and differ only in one PS register
+  bit. That bit takes the result from 0/244 to 244/244. Run 2's 244 board
+  values equal the 2026-10-08 `MISMATCH` lines image by image, so the
+  failure reproduced exactly a day and a reboot later.
+- **The model was right.** 244/244 images and 24/24 probes matched
+  `golden(dup_even(x))`, including the two discriminating probes, px(1,0)
+  and px(223,223). Both were predicted before the board data was seen.
+- **The fix holds.** V1.2.1 (HP0 and the DMA memory side at 64 bits; RTL
+  unchanged; identical accelerator netlist INIT contents) gives 244/244 with
+  no register write (run 1). Its CSV is byte-identical to run 3's. The LED
+  build `flash_hp64_led` (same accelerator) was re-verified 244/244 in the
+  demo notebook the same day.
+- **Kept as a safeguard.** Every board notebook reads AFI0 RDCHAN_CTRL after
+  loading the overlay and compares it with the `.hwh`. The demo notebook
+  refuses to run on a mismatch and never writes the register.
+- **Lesson.** Decision agreement was 234/244 and logit correlation 0.98 while
+  every image was wrong. Only the logit-level bit-exact comparison exposed
+  the fault. A simulation that drives the stream directly cannot see a
+  PS-side memory-path fault, so the board check has to compare integers too.

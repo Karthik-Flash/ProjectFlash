@@ -12,6 +12,16 @@ This document walks through how we got there. It starts with the predecessor pro
 
 The point of this document is not to hide the messiness of the process. Real engineering has bugs, dead ends, and moments where you realise the code you shipped was subtly wrong. Where those matter to the story, we include them.
 
+> **Revision note (2026-10-09):** the board run is done. Part 11 records it:
+> **244/244 bit-exact on the PYNQ-Z2**, at 66.67 MHz rather than 75 MHz,
+> 182.94 ms per image. Parts 1–10 and Appendix A describe the state *before*
+> the board run and are kept as written; where they say "next milestone" or
+> "75 MHz", Part 11 supersedes them. **Terminology:** this narrative calls the
+> hackathon design "v0 (PneumoniaFPGA)" with its 5-of-8 result. The project
+> brief and `PROJECT_FLASH_REPORT.md` call the hackathon versions H-V0…H-V4 and
+> reserve "v0" for the audited 28×28 baseline that is bit-exact on 244/244
+> (`docs/v0/`).
+>
 > **Revision note (Oct 2026):** an earlier draft of this document overstated three things — it said the RTL was verified on all 244 vectors (it was verified on 16; the golden model on 244), that the 244 vectors were the whole test split (they are a seeded subset of it), and that V1.2 reused V1.1's weights (each stage was trained separately). All three are corrected below.
 
 ---
@@ -315,7 +325,106 @@ Each of these builds on the same foundation: an FPGA-based, bit-exact, resolutio
 
 ---
 
-## Appendix A — Numbers reference
+## Part 11: On the board (October 2026)
+
+### From simulation to silicon
+
+The AXI wrapper (`v1/rtl/top_v1_axi.v`) puts `top_v1` behind two standard
+interfaces. Pixels arrive on an AXI4-Stream port as 32-bit beats, four pixels
+per beat. Control and results go through a small AXI-Lite register file:
+start, status, threshold, the two logits, the margin, the decision, a VERSION
+constant (0xF1A50102), and a CYCLES counter that measures compute latency in
+clock ticks. A Vivado block design connects it to the Zynq processing system
+through an AXI DMA, which copies the image from DDR into the stream without
+the ARM touching each byte. The wrapper passed a 33-check xsim testbench
+before any bitstream was built.
+
+### Why 66.67 MHz, not 75 MHz
+
+The clock for the programmable logic comes from the processing system's
+PLLs, which can only make certain frequencies. Requesting 75 MHz gives 76.92
+MHz. The next step down, 71.43 MHz, failed post-route timing by 0.925 ns. The
+critical path is the convolution engine's feature-map address arithmetic
+(multiply-and-add through DSP slices into the block-RAM address pins). It
+fits within 13.3 ns before placement, but not once 80 block RAMs are spread
+across the die next to the processor. The next step, **66.67 MHz** (1000 MHz
+/ 15), meets timing with 0.31 ns to spare. The RTL was frozen, so we took the
+lower clock rather than redesign the engine; pipelining that address path is
+the first hardware item for V2.
+
+### The bug that only the board could show
+
+The first board run, on 8 October, returned **0 of 244** images bit-exact.
+Yet the answers looked almost right: the board's logits correlated with the
+expected ones at 0.98, and 234 of 244 decisions agreed. A decision-level test
+would have passed this hardware.
+
+We located the fault offline, without touching the board again. Simple
+synthetic images gave the clue: constant images and a ramp that is constant
+along each row came back exact, while a ramp along each row did not. That
+pointed at the order of pixels within a row. A systematic search over
+plausible corruptions found one that reproduced every result exactly: the
+accelerator was computing the right function on an input in which every
+second 32-bit word (four pixels) was a copy of the word before it. That model
+matched all 244 images and all 24 probe images. It also predicted, before
+they were run, the board's output for two single-pixel probes on which it
+disagrees with the correct answer. The board then produced exactly those
+outputs.
+
+The mechanism sits in the processor side of the chip. The port the DMA reads
+DDR through (HP0) has a width setting in a small bridge called the AFI. Our
+design used a 32-bit port, but PYNQ boots the processor with that bridge in
+64-bit mode and does not re-run the initialisation that would change it.
+Every 32-bit read therefore returned the low half of a 64-bit word. On 9
+October we confirmed this by intervention. With the old 32-bit bitstream on
+the same boot, writing one bit of one processor register took the result from
+0/244 to 244/244. The fix (V1.2.1) makes the port and the DMA's memory side
+64-bit, matching PYNQ's default. The Verilog did not change.
+
+Simulation could not have caught this, because the testbench drove the
+stream directly and never modelled the processor's memory path. What caught
+it was the same discipline that found the v0 bugs: compare full 32-bit
+results, image by image, against an independent reference, and treat
+"almost right" as wrong.
+
+### Results on the board
+
+| What | Result | Label |
+|---|---|---|
+| Bit-exact, V1.2.1 (`flash_hp64`) | 244/244 (logit0, logit1, margin, decision) | Measured |
+| Bit-exact, LED build (`flash_hp64_led`) | 244/244 | Measured |
+| Compute latency | 182.94 ms/image (12,196,126 cycles) | Measured |
+| End to end, incl. DMA and register access | 184.73 ms/image, 5.41 images/s | Measured |
+| ARM Cortex-A9, same golden model (NumPy int64) | 665–744 ms/image, so the FPGA is 3.6–4.1× faster | Measured / Derived |
+| Post-route timing at 66.67 MHz | WNS +0.314 ns, WHS +0.030 ns | Measured |
+| Chip power | 1.494 W total, 1.256 W of it the ARM side | Vivado estimate, not measured |
+
+The ARM comparison flatters neither side: it is unoptimised NumPy on one
+core. A desktop PC runs the same code in 8.7 ms, because the V1 engine does
+one multiply-accumulate per clock by design. V1 proves that the integer
+network runs exactly in hardware. Making it fast is V2 work; 14 of the chip's
+220 DSP multipliers are in use.
+
+### What the board says about the model
+
+On the 244 images the board flags 117 of 122 pneumonia cases (sensitivity
+0.959) and clears 57 of 122 others (specificity 0.467). That trade-off was
+chosen, not observed by accident. The threshold was set on validation data
+to catch at least 90% of pneumonia, so most errors are false alarms (65)
+rather than misses (5), and the misses all sit just below the threshold. The
+manifest also shows where the false alarms come from. Two thirds of the
+"not pneumonia but not normal either" studies are flagged, against one third
+of the clearly normal ones. The AUROC on these 244 is 0.837, consistent with
+the 0.8229 measured on all 4,003 test patients, which remains the headline
+accuracy figure. Moving the threshold is one register write. Choosing a
+better one has to be done on validation data, which is a V2 task.
+
+V1 is a research prototype and engineering demonstration, not a medical
+device.
+
+---
+
+## Appendix A — Numbers reference (pre-board; see Part 11 for the board results)
 
 Everything a paper reviewer might want, in one place.
 

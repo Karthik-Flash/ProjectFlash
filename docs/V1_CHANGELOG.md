@@ -1,4 +1,4 @@
-# v1 — what changed and why (v1_0 → v1_2)
+# v1 — what changed and why (v1_0 → v1_2.1)
 
 Built only from `git log` on `main`. Short hashes cite the commit each claim comes
 from. V1.1 is the 28×28 stage, V1.2 the 224×224 stage; both share one RTL.
@@ -136,3 +136,96 @@ address. xsim sweep bit-exact 16/16 against the Python golden model.
 
 Implementation still fails IO placement (98 unplaced ports). The AXI wrapper is
 the next step.
+
+*Note added 2026-10-07 (`7c16219`, `d1dc26f`): the `78d9e58` run loaded the
+**v1_1** `.mem` files through `top_v1.v`'s parameter defaults. Its LUT/FF
+figures are superseded; see Step 7.*
+
+## Step 7 — Honest V1.2 synthesis, AXI wrapper, wrapper simulation (`7c16219`, `d1dc26f`, `726391e`, `d2ecb7e`)
+
+- `top_v1.v` parameter defaults now point at the v1_2 files. Re-synthesis
+  logged `Synth 8-3876` for all three v1_2 files and gave WNS +0.085 ns,
+  WHS +0.079 ns, 2,675 LUT, 2,845 FF, 80 RAMB36 + 1 RAMB18, 14 DSP at 75 MHz
+  (synthesis estimate). The +669 LUT come from the weight ROM, whose logic
+  depends on its contents.
+- `top_v1_axi.v`: an AXI4-Stream input (32-bit, 4 pixels per beat) and an
+  AXI4-Lite register map (CTRL, STATUS, THRESHOLD, LOGIT0/1, MARGIN,
+  DECISION, VERSION = 0xF1A50102, CYCLES). It mirrors `tb_v1`: pixels first,
+  then a single start pulse.
+- `tb_v1_axi.v`: xsim PASS, 33 checks; CYCLES = 12,196,126 per image.
+
+## Step 8 — V1.2 block design and bitstream (`8bb4a58`, `21ace48`)
+
+- Block design `flash_bd`: PS7, AXI DMA (simple mode, MM2S only),
+  `top_v1_axi` as a module reference, interrupts concatenated to `IRQ_F2P`.
+  Built in the new project `verilog/ProjectFlashV1_hw`.
+- FCLK0: the PS cannot make 75 MHz. At 71.428566 MHz the design failed
+  post-route timing (WNS −0.925 ns). At **66.666672 MHz** it met timing
+  (WNS +0.206 ns, WHS +0.024 ns, 0 of 15,320 failing).
+- Board notebook, bundle script and README.
+
+## Step 9 — First board run: 0/244, fault localised offline (`0b1a0d5`, `0952fbf`)
+
+- 2026-10-08, PYNQ 3.1.1: **0/244** bit-exact, 234/244 decisions agree,
+  unchanged at 25/50/66.67 MHz.
+- Hypothesis search with the golden model: `board == golden(dup_even(x))`
+  (each odd 32-bit input word replaced by the even word before it) on
+  244/244 images and 24/24 probes. Diagnosis: HP0 port 32-bit while the HP0
+  AFI runs in 64-bit mode.
+- The V1.2 bitstream is kept as `flash_hp32.bit/.hwh` for the confirmation
+  test.
+
+## Step 10 — V1.2.1: HP0 and DMA memory side 64-bit (`2791452`, `40f5040`, `3c40e7e`, `1b51d87`, `b2d6ba9`, `d0b8efc`)
+
+- `create_bd.tcl`: `PCW_S_AXI_HP0_DATA_WIDTH` 64,
+  `c_m_axi_mm2s_data_width` 64. Unchanged: stream 32-bit, length width 26,
+  simple mode, FCLK0 66.666672 MHz. A direct DMA→HP0 connection is refused
+  (`[BD 41-1285]`, AXI4 vs AXI3), so `axi_mem_intercon` keeps only an
+  `auto_pc` protocol converter. RTL unchanged.
+- `flash_hp64.bit` `0ee58d6c924cd162`, `.hwh` `7011237c69968c86`. Post-route
+  WNS +0.314 ns, WHS +0.030 ns, 0 of 15,451 failing. 3,864 LUT, 4,766 FF,
+  81 RAMB36 + 2 RAMB18, 14 DSP. Power estimate 1.494 W. The accelerator
+  netlist came from the IP cache; all 2,274 `INIT_xx` lines are identical to
+  V1.2.
+- Notebook: `BIT` selector, a read-only AFI-vs-`.hwh` check, an `AFI_FORCE`
+  cell (off by default), auto-saved `results_*.csv` / `summary_*.json`, a
+  throughput cell, and an ARM golden-model baseline. Generator
+  `v1/board/make_notebook.py`.
+
+## Step 11 — V1.2.1 verified on the board, root cause confirmed (`d22628a`)
+
+- 2026-10-09, one boot. Run 1 `flash_hp64`: **244/244**. Run 2 `flash_hp32`:
+  0/244, image by image identical to 2026-10-08. Run 3 `flash_hp32` with AFI
+  RDCHAN_CTRL bit 0 written 0 → 1: **244/244**; its CSV is byte-identical to
+  run 1's.
+- Run 1 latency: 182.94 ms compute (CYCLES), 184.73 ms end to end.
+- ARM golden model: 665.1–743.9 ms per image.
+- Classification on the 244: TP 117, FN 5, TN 57, FP 65.
+
+## Step 12 — V1.2.1-led and the live demo (`f5d4254`, `3e28697`)
+
+- `axi_gpio_led` on the GP0 interconnect at **0x41200000**, two channels,
+  pins from the PYNQ-Z2 board files: LD0–3 = R14/P14/N16/M14; RGB LD4/LD5 via
+  the `rgb_led` interface (bits 0/1/2 = LD4 B/G/R, 3/4/5 = LD5 B/G/R).
+  Software writes GPIO_TRI = 0 first, because the board interface keeps the
+  pins tri-state.
+- `flash_hp64_led.bit` `7e0c3394fac1b57d`, `.hwh` `2b37db60135ed638`.
+  Post-route WNS +0.344 ns, WHS +0.025 ns, 0 of 15,704 failing. 3,947 LUT,
+  4,899 FF. Power estimate 1.499 W. The accelerator netlist is identical to
+  `flash_hp64`.
+- Demo notebook (`make_demo_notebook.py`): a non-cherry-picked 12-image
+  gallery (12/12 bit-exact; ARM mean 706.6 ms vs FPGA 185.0 ms, 3.8×), a live
+  244-image sweep (**244/244 re-verified on the board**), a slider with LED
+  output, and a limitations section.
+
+## Step 13 — V1 close-out (`d6b77ce` and later)
+
+- Evidence filed in `docs/board_runs/2026-10-08/` and `2026-10-09/`, stored
+  byte for byte.
+- Repository restructured (`docs/audits/`, `docs/reports/`, `docs/v0/`,
+  `docs/archive/`).
+- **`v1/board/flash.bit` and `flash.hwh` removed**: they were byte-identical
+  to `flash_hp32.bit/.hwh` (`396a219b10690f26` / `5f8c18af7bdf3650`).
+- `build_hw.tcl` and `create_bd.tcl` default to an FCLK ceiling of 70 MHz,
+  i.e. the verified 66.666672 MHz.
+- Project report: `PROJECT_FLASH_REPORT.md`. Tag `v1.2.1-hw`.
