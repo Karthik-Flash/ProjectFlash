@@ -1,161 +1,110 @@
 # Project FLASH
 
-FPGA-accelerated pneumonia screening on chest X-rays. All inference — convolution,
-pooling, both dense layers, argmax — runs as synthesised RTL on the PL. Nothing
-touches the ARM core during inference.
+**An offline pneumonia screener built as a bit-exact neural network in FPGA hardware.**
 
-Successor to [PneumoniaFPGA](https://github.com/Karthik-Flash/PneumoniaFPGA).
+FLASH takes a chest X-ray and says whether it shows signs of pneumonia. The
+whole convolutional neural network runs as Verilog in the programmable logic
+of a low-cost AMD Zynq-7020 (PYNQ-Z2 board), with no network connection and no
+GPU. Its defining property is exactness: on the board, the chip reproduces an
+independent integer reference model **bit for bit**.
 
-**Team FLASH** · BITS Pilani Hyderabad · Karthikeya Reddy (ML) · Yashwant Rajesh (Architecture)
+> **Research prototype. Not a medical device.** It is not cleared or validated
+> for clinical use and must not be used to diagnose, screen or treat anyone.
 
----
+**Team FLASH** · BITS Pilani Hyderabad · Karthikeya Reddy (ML) · Yashwant Rajesh (Architecture) ·
+5th place, AMD FPGA Hackathon 2026 (predecessor: [PneumoniaFPGA](https://github.com/Karthik-Flash/PneumoniaFPGA))
 
-## Status: v0 closed and verified
+📄 **Full write-up: [`PROJECT_FLASH_REPORT.md`](PROJECT_FLASH_REPORT.md)** ·
+board results: [`docs/V1_board_results_v1_2.md`](docs/V1_board_results_v1_2.md) ·
+docs index: [`docs/README.md`](docs/README.md)
 
-`v0_baseline` is the 28×28 PneumoniaMNIST accelerator. It exists to prove the
-datapath is arithmetically correct before anything scales up.
+![Board output from the live demo](docs/figures/fig_demo_gallery_board.png)
 
-```
-bit-exact logits : 244 / 244
-label agreement  : 244 / 244
-*** RTL IS BIT-EXACT WITH THE GOLDEN MODEL ***
-```
+*Live on the PYNQ-Z2 (2026-10-09): the first six true positives and first six
+true negatives by index, each classified by the FPGA (12/12 bit-exact against
+the golden model) and, for comparison, by the board's ARM core.*
 
-Every number below is measured. None is estimated.
+## Status: V1 complete (V1.2.1, tag `v1.2.1-hw`)
 
-### Verification
+Labels as in the [project brief](docs/Project_FLASH_brief.pdf). **Measured**
+means a tool or board run on the current design; **Synthesis estimate** means
+a Vivado estimate (every power figure is one); **Derived** means computed from
+measured values; **Not yet done** means no number exists.
 
-| Check                                   | Result                                                          |
-| --------------------------------------- | --------------------------------------------------------------- |
-| Logits vs golden model, 244 test images | **244 / 244 bit-exact**                                   |
-| Conv feature map vs golden              | 0 mismatches / 3,136                                            |
-| Pooled tensor vs golden                 | 0 mismatches / 784                                              |
-| FC1 neuron outputs vs golden            | 0 mismatches / 16                                               |
-| `torch(hard)` vs NumPy golden         | IDENTICAL                                                       |
-| Conv accumulator range, full test set   | [−41,632, +85,317] vs 20-bit budget ±524,287 (6.1× headroom) |
+| What | Value | Label |
+|---|---|---|
+| Board output = golden model, 224×224, V1.2.1 | **244 / 244 images**: logit0, logit1, margin and decision all exact | Measured |
+| Same, LED demo build | **244 / 244** | Measured |
+| Time per image | **182.94 ms** compute (12,196,126 cycles), **184.73 ms** end to end | Measured |
+| Clock, post-route timing | **66.67 MHz**; WNS +0.314 ns, WHS +0.030 ns, 0 failing endpoints | Measured |
+| Chip usage | 7.3% LUT, 4.5% FF, 58.6% block RAM, 6.4% DSP | Measured |
+| FPGA vs the board's ARM (same NumPy model) | 3.6–4.1× faster (ARM 665–744 ms) | Derived |
+| Model quality, 4,003 unseen test patients | AUROC **0.8229** (95% CI 0.8083–0.8379); sensitivity 91.0% / specificity 53.9% at the chosen threshold | Measured |
+| On the 244 verification images, computed by the board | sensitivity 0.959, specificity 0.467, AUROC 0.837 | Measured / Derived |
+| Chip power | 1.494 W, of which 1.256 W is the ARM side | Synthesis estimate |
+| Measured board power; full 4,003-image board run; DICOM end to end on the board | — | Not yet done |
 
-### Implementation — 75 MHz, xc7z020clg400-1
+**Headline results.**
 
-| Metric                   | Value                                                     |
-| ------------------------ | --------------------------------------------------------- |
-| Worst negative slack     | **+0.290 ns**                                       |
-| Worst hold slack         | +0.104 ns                                                 |
-| Failing endpoints        | 0 / 3,173                                                 |
-| Maximum achievable clock | ~83.7 MHz                                                 |
-| Total on-chip power      | **0.116 W**                                         |
-| Dynamic                  | 0.011 W                                                   |
-| Device static            | 0.105 W (90% of total)                                    |
-| Junction temperature     | 26.3 °C                                                  |
-| Power confidence         | Medium — activity from a simulation SAIF, not vectorless |
+- **Bit-exact on silicon.** The board reproduces the golden model on all 244
+  verification images, on three bitstreams.
+- **A board-only fault, found offline.** The first board run gave 0/244 while
+  234/244 decisions still agreed. The cause was located offline with the
+  golden model and 24 probe images: the PS's HP0 port bridge was in 64-bit
+  mode while the design used 32 bits. It was confirmed on the board by
+  flipping that one register bit (0/244 → 244/244). See report §10.
+- **One engine, any resolution.** A single 3×3 convolution engine, driven by
+  a layer table in on-chip memory, runs 28×28 and 224×224 with the same
+  Verilog.
 
-### Model — INT8, what the hardware actually computes
-
-|                         | Value |
-| ----------------------- | ----- |
-| Balanced accuracy       | 84.7% |
-| Specificity (Normal)    | 73.9% |
-| Sensitivity (Pneumonia) | 95.4% |
-
-Two independent claims, deliberately kept separate: *the hardware is correct* and
-*the model is 84.7%*. Earlier versions conflated them and reported a 95.4% that the
-hardware could not reproduce.
-
-Five defects were fixed getting here — three in the datapath, two in the testbench.
-See [`docs/V0_CHANGELOG.md`](docs/V0_CHANGELOG.md) for each, and
-[`docs/V0_SUMMARY.md`](docs/V0_SUMMARY.md) for the closing writeup.
-
-## Layout
+## Repository map
 
 ```
-colab/
-  ProjectFlash_V0.ipynb   trains, exports .mem, emits test vectors
-v0_baseline/
-  rtl/          seven Verilog modules
-  sim/          tb_top.v, vivado_setup.tcl, run_sim.tcl, run_iverilog.sh
-  mem/          weights + 244 verification vectors
-  constraints/
-tools/
-  golden_model.py       standalone NumPy reference
-docs/
-  V0_CHANGELOG.md       per-defect detail
-  V0_SUMMARY.md         v0 closing summary
-  V1_HANDOFF.md         everything phase 2 needs to start
+PROJECT_FLASH_REPORT.md   the V1 project report (start here)
+README.md                 this page
+colab/                    training + export notebooks (ProjectFlash_V1.ipynb is the source of truth)
+v1/                       current design (V1.x)
+  rtl/                    Verilog: conv_engine, layer_seq, fmap_ram, gap_unit, fc_unit, decision, top_v1, top_v1_axi
+  sim/                    testbenches (tb_v1: 16/16 + 12/12 traces; tb_v1_axi: 33/33 checks)
+  scripts/                Vivado flows: synth_top_v1.tcl, create_bd.tcl, build_hw.tcl, sim_tb_v1_axi.bat
+  board/                  bitstreams (.bit/.hwh), board + demo notebooks and generators, bundle script, README
+  mem/v1_1, mem/v1_2      exported weights, layer table, expected outputs, golden model, DICOM preprocessing
+  constr/                 v1.xdc (legacy, top_v1-only project)
+v0_baseline/              v0: audited 28x28 accelerator (244/244 in simulation), with its own README
+docs/                     results, debug log, changelogs, reports, audits, raw board evidence, figures, archive
+tools/                    report figures + derived numbers, PC timing of the golden model
+verilog/                  local Vivado projects (gitignored except its README)
 ```
 
-## Flow
+## Quick start on the board
 
-Colab → Vivado → FPGA. Nothing in the RTL flow is hand-written data.
+1. Flash the official **PYNQ-Z2** image (tested with **PYNQ 3.1.1**) to an SD
+   card. Set the boot jumper to SD and power from USB. Connect Ethernet to the
+   PC and give the PC `192.168.2.1/24`.
+2. On the PC, build the bundle:
+   `powershell -ExecutionPolicy Bypass -File v1\board\make_board_bundle.ps1`.
+3. Copy `board_bundle\` into `\\192.168.2.99\xilinx\jupyter_notebooks\flash_v1_2\`
+   (user and password `xilinx`).
+4. Open <http://192.168.2.99:9090> (password `xilinx`), then run
+   `flash_v1_2/flash_v1_2_board.ipynb`. On a fresh boot, expect `AFI ... OK`
+   and `BOARD: 244/244 bit-exact`. For the live demo with the board LEDs, run
+   `flash_v1_2_demo.ipynb`.
 
-**1. Colab.** Run `colab/FLASH_v0_train_export_verify.ipynb`. It trains the network
-directly in INT8 space, exports six weight `.mem` files, and writes N zero-padded
-30×30 test images together with the exact logits the hardware must reproduce.
-Download `flash_v0_mem.zip` and unzip into `v0_baseline/mem/`.
+Details, lab order and troubleshooting: [`v1/board/README.md`](v1/board/README.md).
+Rebuilding the hardware and resuming the project: report §14–15 and
+[`verilog/README.md`](verilog/README.md).
 
-**2. Simulate.** With the Vivado project open, in the Tcl Console:
+## How correctness is established
 
-```tcl
-cd C:/KarDRIVE/Projects/ProjectFlash
-source v0_baseline/sim/vivado_setup.tcl
-flash_set_n 244
-```
+Three bit-exact links, then the board:
 
-then Run Behavioral Simulation. `flash_copy_mem` copies the `.mem` files into
-`<proj>.sim/sim_1/behav/xsim/` — xsim resolves bare `$readmemh` paths against its
-own run directory, and skipping this breaks the simulation silently with X's.
-`N_IMAGES` must match `manifest.json` from the notebook.
+1. **Trained network = golden model** (identical logits on all 4,003 test
+   images).
+2. **Golden model = RTL** (xsim, every layer).
+3. **RTL = board** (all 244 verification images).
 
-**3. Implement.**
-
-Then follow `v0_fix/README_power.md` to capture a SAIF and get a real power figure.
-Vectorless analysis assumes ~100% switching on every net and produced 5.75 W for
-this design; the SAIF-derived number is 0.116 W.
-
-**4. Hardware.** Board not yet in hand. The AXI-Stream/DMA integration plan is
-recorded in [`docs/V1_HANDOFF.md`](docs/V1_HANDOFF.md) §5.
-
-## What the testbench actually checks
-
-Per image it compares `logit0` and `logit1` against the golden model **bit for
-bit**, and separately reports label agreement. The 244 images are a balanced slice
-of the test set under a fixed seed, with **no confidence-margin filter** — the
-earlier 8-image set was filtered to >20% margin, which is selection bias and is why
-three genuine bugs went unnoticed for five versions.
-
-Roughly 19% of the 244 are classified wrongly by the model. That is intentional. The
-RTL is required to reproduce the reference model *including its mistakes*. A
-decision bit can be right by accident; a matching 32-bit logit cannot.
-
-## Input format
-
-The accelerator consumes a **30×30 zero-padded frame** — 900 bytes, raw uint8,
-row-major. Padding is no longer generated inside `line_buffer.v`, which is now a
-pure valid-window generator (`window_valid = row>=2 && col>=2`). This makes the
-convolution bit-identical to `torch.nn.Conv2d(padding=1)`, removes every border
-special-case from the RTL, and makes resolution a single parameter.
-
-## Architecture
-
-| Layer         | Operation                   | In        | Out       |
-| ------------- | --------------------------- | --------- | --------- |
-| Conv2D + ReLU | 4 filters, 3×3, pad 1      | 1×28×28 | 4×28×28 |
-| MaxPool2D     | 2×2 stride 2, then`>> 8` | 4×28×28 | 4×14×14 |
-| Flatten       | channel-major               | 4×14×14 | 784       |
-| FC1 + ReLU    | dense                       | 784       | 16        |
-| FC2           | dense, logits               | 16        | 2         |
-| Argmax        | `logit1 > logit0`         | 2         | 1 bit     |
-
-12,634 INT8 parameters. Training happens **directly in INT8 space** — the
-parameters *are* the quantised weights, with straight-through rounding enabled
-partway through — so export is `round(clamp(w))` with no scale factors, and the
-golden model is exactly the trained model.
-
-## Next
-
-Phase 2 moves to RSNA Pneumonia Detection at 224×224: a global-average-pooling
-backbone (~47 k parameters, all resident in BRAM), one parameterised convolution
-engine reused across layers under a layer-descriptor table, and an AXI-Stream/DMA
-datapath.
-
-Staged so one variable moves at a time — new architecture at 28×28 first, then the
-new dataset at 28×28, then 224×224 — with a bit-exact sweep gating each step.
-See [`docs/V1_HANDOFF.md`](docs/V1_HANDOFF.md).
+The 244 images are a seeded, balanced slice of the test set, chosen without
+looking at the model's confidence. The model gets 70 of them wrong, and the
+hardware must reproduce those mistakes too, because a matching 32-bit score
+cannot happen by accident. Every derived number in the report is recomputed
+from the repository by `tools/make_report_figures.py`.
