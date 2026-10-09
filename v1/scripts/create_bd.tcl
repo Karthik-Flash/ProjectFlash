@@ -4,7 +4,7 @@
 # v1/rtl (incl. top_v1_axi.v). Can also be sourced from the Vivado Tcl console
 # of such a project. Replaces any existing flash_bd.
 #
-#   PS7 (board preset) -- FCLK_CLK0 <= 75 MHz, S_AXI_HP0 64-bit, IRQ_F2P
+#   PS7 (board preset) -- FCLK_CLK0 <= ::flash_fclk_max, S_AXI_HP0 64-bit, IRQ_F2P
 #   axi_dma_0          -- no SG, MM2S only, 26-bit length, 64-bit memory side,
 #                         32-bit stream
 #   top_v1_axi_0       -- module reference; s_axis <- DMA M_AXIS_MM2S
@@ -16,12 +16,14 @@
 # AFI in 64-bit mode and does not re-run this design's ps7_init. 64-bit matches
 # the AFI's PYNQ default. See docs/V1_board_debug_log.md.
 #
-# Optional input:  ::flash_fclk_max  (MHz, default 75.0). FCLK0 is lowered
-# until the PS's ACTUAL frequency is <= this value.
+# Optional input:  ::flash_fclk_max  (MHz, default 70.0). FCLK0 is lowered
+# until the PS's ACTUAL frequency is <= this value. 70.0 gives 66.666672 MHz
+# (IO PLL 1000/15), the verified clock; 75.0 gives 71.428566 MHz, which failed
+# post-route timing (WNS -0.925 ns) on 2026-10-07.
 # Optional input:  ::flash_led (0/1, default 0): add axi_gpio_led for the board LEDs.
 # Output:          ::flash_fclk_actual (MHz, string as Vivado reports it)
 
-if {![info exists ::flash_fclk_max]} { set ::flash_fclk_max 75.0 }
+if {![info exists ::flash_fclk_max]} { set ::flash_fclk_max 70.0 }
 
 # ---- start clean -------------------------------------------------------
 if {[llength [get_files -quiet flash_bd.bd]] > 0} {

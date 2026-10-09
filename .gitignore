@@ -1,7 +1,11 @@
-# Vivado project directory (ProjectFlashV0 lives here)
-/verilog/
+# ---- Vivado projects and build scratch -------------------------------------
+# All Vivado projects, logs and scratch runs live under verilog/ and are
+# regenerated from v1/ by the scripts in v1/scripts/. Only the README that
+# says which project is which is tracked.
+/verilog/*
+!/verilog/README.md
 
-# Vivado
+# Vivado / xsim byproducts wherever they land
 *.jou
 *.log
 *.str
@@ -15,20 +19,16 @@ vivado*/
 *.srcs/
 *.gen/
 *.xpr
-# Python / Colab
-__pycache__/
-*.pyc
-.ipynb_checkpoints/
-flash_v0_mem/
-*.zip
-# Sim artefacts
-*.vcd
-*.wdb
 xsim.dir/
 webtalk*
+*.vcd
+*.wdb
+*.vvp
+# Vivado's PS7 IP writes NA/ps7_summary.html into the batch working directory
+/NA/
 
-# FPGA implementation outputs (bitstreams, checkpoints, reports) -
-# regenerate from the Vivado project, don't commit
+# ---- FPGA implementation outputs ---------------------------------------------
+# Regenerable from the Vivado project; not committed in general ...
 *.bit
 *.bin
 *.mcs
@@ -37,9 +37,19 @@ webtalk*
 *.dcp
 *.rpt
 *.pb
+# ... except the board overlays and the reports kept as evidence of a run.
+!v1/board/flash_hp*.bit
+!docs/**/*.rpt
 
-# ML training artefacts / datasets for later phases (v1+) -
-# only exported .mem weights and small test vectors belong in git
+# ---- Python / Colab ----------------------------------------------------------
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+*.zip
+flash_v0_mem/
+
+# ML training artefacts and datasets: only exported .mem weights and small
+# test vectors belong in git.
 *.pth
 *.pt
 *.h5
@@ -52,97 +62,25 @@ runs/
 data/
 datasets/
 
-# OS / editor cruft
-.DS_Store
-Thumbs.db
-.vscode/
-
-flash_v1_1_smoke_export_28x28
-model_state.pt
-# ---- v0 rules (unchanged) ----
-/verilog/
-*.jou
-*.log
-*.str
-.Xil/
-vivado*/
-*.cache/
-*.hw/
-*.ip_user_files/
-*.runs/
-*.sim/
-*.srcs/
-*.gen/
-*.xpr
-__pycache__/
-*.pyc
-.ipynb_checkpoints/
-flash_v0_mem/
-*.zip
-*.vcd
-*.wdb
-xsim.dir/
-webtalk*
-*.bit
-*.bin
-*.mcs
-*.prm
-*.ltx
-*.dcp
-*.rpt
-*.pb
-*.pth
-*.pt
-*.h5
-*.ckpt
-*.onnx
-*.npz
-checkpoints/
-wandb/
-runs/
-data/
-datasets/
-.DS_Store
-Thumbs.db
-.vscode/
-
-# ---- V1 additions ----
-# Downloaded/decoded RSNA cache and the raw Colab export zips
+# V1 export: everything under v1/mem/ is regenerable from colab/ProjectFlash_V1.ipynb.
+# Commit only the small files the RTL and the board need; drop the bulk vectors.
 flash_v1/
 flash_v1_*.zip
-
-# Everything under v1/mem/ is regeneratable from the notebook + weights.
-# Commit only the small files needed for RTL, drop the bulk vectors.
+flash_v1_1_smoke_export_28x28
 v1/mem/*/*/vectors/img_*.mem
 v1/mem/*/*/vectors/trace/
 v1/mem/*/*/model_state.pt
 v1/mem/*/*/report/
-# Colab dumps its notebook copy inside each export folder; the source of
-# truth is colab/ProjectFlash_V1.ipynb, so drop the duplicates.
 v1/mem/*/ProjectFlash_V1_*.ipynb
-
-# Vivado V1 project workspace (parallel to v0's ignore rule)
+v1/mem/smoke_28/
+v1/mem/v1_0/
 verilog_v1/
 v1/vivado/
 
-#smoke
-v1/mem/smoke_28/
-v1/mem/v1_0/
-*.vvp
-tb_top.vvp
-
-# Synthesis/timing reports kept deliberately as a record of a specific run.
-# The blanket *.rpt rule above is for regenerable Vivado outputs; these are
-# checked-in evidence and must survive it.
-!docs/*.rpt
-
-# ---- V1.2 hardware bring-up ----
-# Superseded reports kept as evidence in the docs archive
-!docs/archive/*.rpt
-# Board bundle is assembled locally by v1/board/make_board_bundle.ps1
+# Board bundle, assembled locally by v1/board/make_board_bundle.ps1
 board_bundle/
-# Vivado's PS7 IP writes NA/ps7_summary.html into the batch working directory
-/NA/
-# The board overlay is committed deliberately (4 MB); other *.bit stay ignored
-!v1/board/flash.bit
-!v1/board/flash_hp*.bit
+
+# ---- OS / editor ---------------------------------------------------------------
+.DS_Store
+Thumbs.db
+.vscode/

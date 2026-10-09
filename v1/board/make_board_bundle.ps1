@@ -1,4 +1,4 @@
-# make_board_bundle.ps1 -- assemble board_bundle/ for the PYNQ-Z2 (V1.2 / V1.2.1).
+# make_board_bundle.ps1 -- assemble board_bundle/ for the PYNQ-Z2 (V1.2.1, tested on PYNQ 3.1.1).
 #
 # Run from anywhere:  powershell -ExecutionPolicy Bypass -File v1\board\make_board_bundle.ps1
 # Output: <repo>\board_bundle\ (gitignored, rebuilt from scratch each run). Copy
@@ -6,8 +6,10 @@
 #
 #   board_bundle\
 #     flash_hp64.bit, flash_hp64.hwh    V1.2.1 overlay, HP0 64-bit (notebook default)
+#     flash_hp64_led.bit, .hwh          V1.2.1-led: flash_hp64 + axi_gpio_led (demo default)
 #     flash_hp32.bit, flash_hp32.hwh    V1.2 overlay, HP0 32-bit (AFI confirmation test)
-#     flash_v1_2_board.ipynb            board notebook (BIT selects the overlay)
+#     flash_v1_2_board.ipynb            verification notebook (BIT selects the overlay)
+#     flash_v1_2_demo.ipynb             live demo notebook (gallery, sweep, slider, LEDs)
 #     tools\flash_preprocess.py         DICOM -> uint8 preprocessing contract
 #     tools\golden_model_v1.py          NumPy golden model (ARM baseline cell)
 #     model\weights.mem, bias.mem,      v1_2 export read by the golden model
@@ -20,7 +22,8 @@ $repo   = Resolve-Path (Join-Path $PSScriptRoot '..\..')
 $board  = Join-Path $repo 'v1\board'
 $export = Join-Path $repo 'v1\mem\v1_2\flash_v1_2'
 $out    = Join-Path $repo 'board_bundle'
-$files  = 'flash_hp64.bit', 'flash_hp64.hwh', 'flash_hp32.bit', 'flash_hp32.hwh', 'flash_v1_2_board.ipynb'
+$files  = 'flash_hp64.bit', 'flash_hp64.hwh', 'flash_hp64_led.bit', 'flash_hp64_led.hwh',
+          'flash_hp32.bit', 'flash_hp32.hwh', 'flash_v1_2_board.ipynb', 'flash_v1_2_demo.ipynb'
 
 foreach ($f in $files) {
     if (-not (Test-Path (Join-Path $board $f))) { throw "missing v1\board\$f" }

@@ -13,7 +13,7 @@
 > The RTL and RAM sizes were V1.2 (128 KB `fmap_ram`), so the numbers are
 > structurally close, but the ROM contents were V1.1's. A re-run with the
 > V1.2 files replaces them (next section). The original reports are kept in
-> `docs/archive/`. The xsim 16/16 PASS is not affected: `tb_v1` overrides
+> `docs/archive/` (`../../archive/`). The xsim 16/16 PASS is not affected: `tb_v1` overrides
 > the paths.
 
 ## Current numbers — re-run with the V1.2 files (2026-10-07)

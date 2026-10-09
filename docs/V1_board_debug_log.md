@@ -18,7 +18,7 @@ below so they can be checked later.
 
 | Fact | Value | Source |
 |---|---|---|
-| Bitstream | `v1/board/flash.bit`, VERSION `0xF1A50102` read back OK | notebook cell 1 |
+| Bitstream | `v1/board/flash.bit` (now `v1/board/flash_hp32.bit`, byte-identical), VERSION `0xF1A50102` read back OK | notebook cell 1 |
 | FCLK0 on the board | 66.666667 MHz (build value 66.666672) | notebook cell 1 |
 | IP blocks | `top_v1_axi_0`, `axi_dma_0`, `processing_system7_0` | notebook cell 1 |
 | Bit-exact images | **0 / 244** (logit0 0, logit1 0, margin 2, decision 234) | notebook cell 4 |
@@ -191,7 +191,7 @@ constant-register warnings in `conv_engine`, `fmap_ram`, `layer_seq`,
 
 ---
 
-## 2026-10-08 — diag_2 from the board (`flash.bit` 396a219b10690f26)
+## 2026-10-08 — diag_2 from the board (`flash.bit` 396a219b10690f26, now `flash_hp32.bit`)
 
 Board printout, verbatim:
 
@@ -223,7 +223,7 @@ px(223,223)=255          (-375, 106, 481, 1, 12196126)
 ```
 
 **File integrity.** All four SHA-256 prefixes match the repo
-(`v1/board/flash.bit`, `v1/board/flash.hwh`, `vectors/img_0.mem`,
+(`v1/board/flash.bit`, `v1/board/flash.hwh` — now `flash_hp32.*` — `vectors/img_0.mem`,
 `vectors/exp_logit0.mem`). The board ran the intended bitstream on the
 intended data.
 
@@ -303,7 +303,7 @@ one attempt.
 
 The critical path is unchanged in kind (`u_conv/fm_rd_addr3` DSP chain ->
 `u_ram_a` address, 13.786 ns). Reports:
-`docs/V1_impl_{timing,util,power}_v1_2_hp64.rpt`.
+`docs/reports/impl/V1_impl_{timing,util,power}_v1_2_hp64.rpt`.
 
 **Which `.mem` files are in the accelerator.** This build has no fresh
 `$readmem` lines. Vivado's IP cache reused the accelerator netlist (cache

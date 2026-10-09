@@ -8,22 +8,24 @@
 #                 If the file does not exist, a project is created there with
 #                 the PYNQ-Z2 part/board and the v1 sources. Close the project in
 #                 the GUI first: the GUI overwrites changes made behind its back.
-# fclk_max_mhz  : FCLK0 ceiling, default 75.0 (see create_bd.tcl).
-# board_name    : basename of the copies in v1/board/, default flash
-#                 (V1.2.1 builds use flash_hp64).
+# fclk_max_mhz  : FCLK0 ceiling, default 70.0 -> 66.666672 MHz, the verified clock
+#                 (75.0 lands on 71.43 MHz, which fails timing; see create_bd.tcl).
+# board_name    : basename of the copies in v1/board/, default flash_hp64
+#                 (flash_hp64_led for the LED variant).
 # led           : 1 adds axi_gpio_led (board LEDs), default 0.
 #
 # Steps: add top_v1_axi.v (sources_1) and tb_v1_axi.v (sim_1, tb_v1 stays the
 # sim top); disable v1.xdc; source create_bd.tcl; synth + impl + bitstream;
-# write impl reports into docs/; copy .bit/.hwh to v1/board/<board_name>.{bit,hwh};
+# write impl reports into docs/reports/impl/; copy .bit/.hwh to v1/board/<board_name>.{bit,hwh};
 # close the project. Check the $readmem lines in every runme.log afterwards.
 
 set repo  [file normalize [file dirname [info script]]/../..]
 set xpr   [file normalize [lindex $argv 0]]
-set ::flash_fclk_max [expr {[llength $argv] > 1 ? [lindex $argv 1] : 75.0}]
-set board_name [expr {[llength $argv] > 2 ? [lindex $argv 2] : "flash"}]
+set ::flash_fclk_max [expr {[llength $argv] > 1 ? [lindex $argv 1] : 70.0}]
+set board_name [expr {[llength $argv] > 2 ? [lindex $argv 2] : "flash_hp64"}]
 set ::flash_led [expr {[llength $argv] > 3 ? [lindex $argv 3] : 0}]
-# Report tag: docs/V1_impl_*_v1_2.rpt for the default build, *_v1_2_hp64.rpt etc. otherwise.
+# Report tag: docs/reports/impl/V1_impl_*_v1_2_hp64.rpt for flash_hp64, *_v1_2_hp64_led.rpt for
+# flash_hp64_led; the name "flash" (the V1.2 HP0-32 build, now flash_hp32) maps to *_v1_2.rpt.
 set rpt_tag [expr {$board_name eq "flash" ? "v1_2" : "v1_2_[string map {flash_ {}} $board_name]"}]
 set inc   $repo/v1/mem/v1_2/flash_v1_2
 set rtl   $repo/v1/rtl
@@ -78,9 +80,9 @@ if {[get_property PROGRESS [get_runs impl_1]] ne "100%"} {
 
 # ---- reports -----------------------------------------------------------
 open_run impl_1
-report_timing_summary -max_paths 10 -file $repo/docs/V1_impl_timing_$rpt_tag.rpt
-report_utilization -hierarchical -file $repo/docs/V1_impl_util_$rpt_tag.rpt
-report_power -file $repo/docs/V1_impl_power_$rpt_tag.rpt
+report_timing_summary -max_paths 10 -file $repo/docs/reports/impl/V1_impl_timing_$rpt_tag.rpt
+report_utilization -hierarchical -file $repo/docs/reports/impl/V1_impl_util_$rpt_tag.rpt
+report_power -file $repo/docs/reports/impl/V1_impl_power_$rpt_tag.rpt
 set wns [get_property SLACK [get_timing_paths -delay_type max -max_paths 1 -nworst 1]]
 set whs [get_property SLACK [get_timing_paths -delay_type min -max_paths 1 -nworst 1]]
 puts "FLASH_TIMING: WNS $wns ns WHS $whs ns at FCLK0 $::flash_fclk_actual MHz"

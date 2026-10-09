@@ -112,7 +112,7 @@ For each of these, at each layer, we compare with the golden model's answer. If 
 Three separate checks were run, and it matters which is which:
 
 1. **PyTorch (float64) vs golden model:** on every image of the test split (`EXACT_CHECK_FULL_TEST = True` in the notebook), the integer golden model reproduces the logits exactly. This proves the exported integer network *is* the trained network.
-2. **Golden model vs exported vectors (independent audit):** the golden model was re-run from scratch, outside the notebook, against all **244** exported verification images and all **60** trace files, for both V1.1 and V1.2. Result: **0 mismatches** (documented in `docs/V1_audit_v1_1.md` and `docs/V1_audit_v1_2.md`).
+2. **Golden model vs exported vectors (independent audit):** the golden model was re-run from scratch, outside the notebook, against all **244** exported verification images and all **60** trace files, for both V1.1 and V1.2. Result: **0 mismatches** (documented in `docs/audits/V1_audit_v1_1.md` and `docs/audits/V1_audit_v1_2.md`).
 3. **RTL vs golden model (Vivado xsim):** the full Verilog design was simulated on the first **16** of those 244 images. Result at 224×224: **16/16 exact** on logit0, logit1, margin and decision, and **12/12** intermediate trace files (conv1–conv5 and GAP, for images 0 and 1) exact. A 224×224 simulation takes over a minute of wall time per image, so the remaining 228 are run on the physical board instead, where each takes milliseconds.
 
 This is what "bit-exact" means. It is a categorical statement, not a tolerance: one differing bit on one image would be a failure.

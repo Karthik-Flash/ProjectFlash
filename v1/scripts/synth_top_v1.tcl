@@ -5,7 +5,7 @@
 #       -source v1/scripts/synth_top_v1.tcl -log verilog/synth_v1_2/vivado.log
 #
 # Output (gitignored scratch): verilog/synth_v1_2/. Reports are copied to
-# docs/ by hand after checking the $readmem lines in the log.
+# docs/reports/synth/ by hand after checking the $readmem lines in the log.
 
 set repo   [file normalize [file dirname [info script]]/../..]
 set out    $repo/verilog/synth_v1_2

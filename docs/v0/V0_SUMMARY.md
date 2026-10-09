@@ -170,8 +170,8 @@ v0_baseline/rtl/                           7 Verilog modules
 v0_baseline/sim/tb_top.v                   N-image bit-exactness sweep
 v0_baseline/sim/vivado_setup.tcl           wires an existing Vivado project, copies .mem
 v0_baseline/mem/                           weights + 244 verification vectors
-tools/golden_model.py                      standalone NumPy reference
-docs/V0_CHANGELOG.md                       per-bug detail
+v0_baseline/tools/golden_model.py          standalone NumPy reference
+docs/v0/V0_CHANGELOG.md                    per-bug detail
 ```
 
 The notebook trains **directly in INT8 space** — parameters are the quantised
