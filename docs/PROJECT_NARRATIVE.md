@@ -101,7 +101,7 @@ Project FLASH V1 uses **three** implementations:
 
 1. **The training model** (`ProjectFlash_V1.ipynb`, Colab). Written in PyTorch. Uses float32 for training, then quantises weights and biases to int8/int32 at export. This is where accuracy comes from — the model learns what pneumonia looks like.
 
-2. **The golden model** (`tools/golden_model_v1.py`). A standalone Python script using only NumPy int64. It reads *only* the exported memory files (weights.mem, bias.mem, layer_table.mem) — nothing from PyTorch — and computes the exact same integer arithmetic that the hardware will compute. The golden model is deliberately simple, deliberately slow, and deliberately readable. Its job is not to be fast; its job is to be *correct by inspection*. When we say "the reference answer for image k is X," we mean the golden model's output for image k is X.
+2. **The golden model** (`v1/mem/v1_2/flash_v1_2/tools/golden_model_v1.py`). A standalone Python script using only NumPy int64. It reads *only* the exported memory files (weights.mem, bias.mem, layer_table.mem) — nothing from PyTorch — and computes the exact same integer arithmetic that the hardware will compute. The golden model is deliberately simple, deliberately slow, and deliberately readable. Its job is not to be fast; its job is to be *correct by inspection*. When we say "the reference answer for image k is X," we mean the golden model's output for image k is X.
 
 3. **The hardware RTL** (`v1/rtl/`). The Verilog modules that actually run on the FPGA. Its job is to compute exactly the same answers as the golden model, using the resources of real silicon.
 
@@ -210,7 +210,7 @@ Sizing these RAMs turned out to be a subtle issue that we got wrong initially. F
 
 ### The DICOM preprocessing
 
-Real chest X-rays don't come as PNG files. They come as DICOM (Digital Imaging and Communications in Medicine) files with a full radiological header. To get bit-exact reproducibility between training and inference, we need to process every DICOM the same way every time. The preprocessing pipeline (`tools/flash_preprocess.py`) does:
+Real chest X-rays don't come as PNG files. They come as DICOM (Digital Imaging and Communications in Medicine) files with a full radiological header. To get bit-exact reproducibility between training and inference, we need to process every DICOM the same way every time. The preprocessing pipeline (`v1/mem/v1_2/flash_v1_2/tools/flash_preprocess.py`) does:
 
 1. **Modality LUT**: DICOM stores raw sensor values; the header specifies a lookup table to convert to linear intensity.
 2. **VOI window**: the header also specifies the "Value of Interest" window — the intensity range that the acquisition considered diagnostically meaningful.
@@ -366,10 +366,9 @@ pointed at the order of pixels within a row. A systematic search over
 plausible corruptions found one that reproduced every result exactly: the
 accelerator was computing the right function on an input in which every
 second 32-bit word (four pixels) was a copy of the word before it. That model
-matched all 244 images and all 24 probe images. It also predicted, before
-they were run, the board's output for two single-pixel probes on which it
-disagrees with the correct answer. The board then produced exactly those
-outputs.
+matched all 244 images and all 24 probe images. It also predicted the board's output for two single-pixel probes on which
+it disagrees with the correct answer, written down before those results were
+looked at. The board's numbers matched the predictions exactly.
 
 The mechanism sits in the processor side of the chip. The port the DMA reads
 DDR through (HP0) has a width setting in a small bridge called the AFI. Our

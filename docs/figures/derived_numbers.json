@@ -1,0 +1,1063 @@
+{
+ "runs": {
+  "flash_hp64": {
+   "bit_exact": 244,
+   "per_field": {
+    "logit0": 244,
+    "logit1": 244,
+    "margin": 244,
+    "decision": 244
+   },
+   "cycles": [
+    12196126
+   ],
+   "summary_n_exact": 244,
+   "afi_bit0_at_load": 0,
+   "afi_bit0_now": 0,
+   "afi_force": false,
+   "hwh_hp0_width": 64,
+   "sha_bit": "0ee58d6c924cd162",
+   "sha_hwh": "7011237c69968c86",
+   "throughput_ms": 184.729,
+   "throughput_ips": 5.413,
+   "arm_ms_image0": 743.9,
+   "arm_load_s": 0.2,
+   "wall_s": 153.8,
+   "fclk0_mhz": 66.666667,
+   "pynq": "3.1.1",
+   "json_date": "2025-05-04T09:28:38",
+   "tp_fn_tn_fp": [
+    117,
+    5,
+    57,
+    65
+   ]
+  },
+  "flash_hp32": {
+   "bit_exact": 0,
+   "per_field": {
+    "logit0": 0,
+    "logit1": 0,
+    "margin": 2,
+    "decision": 234
+   },
+   "cycles": [
+    12196126
+   ],
+   "summary_n_exact": 0,
+   "afi_bit0_at_load": 0,
+   "afi_bit0_now": 0,
+   "afi_force": false,
+   "hwh_hp0_width": 32,
+   "sha_bit": "396a219b10690f26",
+   "sha_hwh": "5f8c18af7bdf3650",
+   "throughput_ms": 184.706,
+   "throughput_ips": 5.414,
+   "arm_ms_image0": 726.3,
+   "arm_load_s": 0.19,
+   "wall_s": 156.3,
+   "fclk0_mhz": 66.666667,
+   "pynq": "3.1.1",
+   "json_date": "2025-05-04T09:37:22",
+   "tp_fn_tn_fp": [
+    118,
+    4,
+    56,
+    66
+   ]
+  },
+  "flash_hp32_afiforce": {
+   "bit_exact": 244,
+   "per_field": {
+    "logit0": 244,
+    "logit1": 244,
+    "margin": 244,
+    "decision": 244
+   },
+   "cycles": [
+    12196126
+   ],
+   "summary_n_exact": 244,
+   "afi_bit0_at_load": 0,
+   "afi_bit0_now": 1,
+   "afi_force": true,
+   "hwh_hp0_width": 32,
+   "sha_bit": "396a219b10690f26",
+   "sha_hwh": "5f8c18af7bdf3650",
+   "throughput_ms": 184.701,
+   "throughput_ips": 5.414,
+   "arm_ms_image0": 665.1,
+   "arm_load_s": 0.19,
+   "wall_s": 154.8,
+   "fclk0_mhz": 66.666667,
+   "pynq": "3.1.1",
+   "json_date": "2025-05-04T09:45:04",
+   "tp_fn_tn_fp": [
+    117,
+    5,
+    57,
+    65
+   ]
+  }
+ },
+ "checks": {
+  "hp64_csv_bytes_equal_afiforce_csv": true,
+  "oct08_mismatch_lines": 244,
+  "hp32_run2_equals_oct08_board": true
+ },
+ "afi": {
+  "decision_agreement": 234,
+  "margin_exact": 2,
+  "corr_logit0": 0.9783,
+  "corr_logit1": 0.9798,
+  "corr_margin": 0.986,
+  "corr_all_logits": 0.979,
+  "golden_equals_expected": 244,
+  "dup_even_model_equals_corrupted_run": 244,
+  "probes_total": 24,
+  "probes_board_eq_model": 24,
+  "probes_board_eq_golden": 12,
+  "probes_discriminating": [
+   "col ramp",
+   "img0 @ 66.667 MHz",
+   "img0 @ 50.000 MHz",
+   "img0 @ 25.000 MHz",
+   "img0 roll 1",
+   "img0 roll -1",
+   "img0 roll 4",
+   "img0 roll -4",
+   "img0 roll 224",
+   "img0 roll -224",
+   "px(1,0)=255",
+   "px(223,223)=255"
+  ],
+  "probe_table": [
+   {
+    "probe": "const 0",
+    "board": [
+     -375,
+     106,
+     481
+    ],
+    "golden": [
+     -375,
+     106,
+     481
+    ],
+    "model": [
+     -375,
+     106,
+     481
+    ],
+    "board_eq_model": true,
+    "board_eq_golden": true
+   },
+   {
+    "probe": "const 128",
+    "board": [
+     1003,
+     3,
+     -1000
+    ],
+    "golden": [
+     1003,
+     3,
+     -1000
+    ],
+    "model": [
+     1003,
+     3,
+     -1000
+    ],
+    "board_eq_model": true,
+    "board_eq_golden": true
+   },
+   {
+    "probe": "const 255",
+    "board": [
+     -469,
+     1559,
+     2028
+    ],
+    "golden": [
+     -469,
+     1559,
+     2028
+    ],
+    "model": [
+     -469,
+     1559,
+     2028
+    ],
+    "board_eq_model": true,
+    "board_eq_golden": true
+   },
+   {
+    "probe": "row ramp",
+    "board": [
+     -40,
+     150,
+     190
+    ],
+    "golden": [
+     -40,
+     150,
+     190
+    ],
+    "model": [
+     -40,
+     150,
+     190
+    ],
+    "board_eq_model": true,
+    "board_eq_golden": true
+   },
+   {
+    "probe": "col ramp",
+    "board": [
+     -629,
+     743,
+     1372
+    ],
+    "golden": [
+     -615,
+     868,
+     1483
+    ],
+    "model": [
+     -629,
+     743,
+     1372
+    ],
+    "board_eq_model": true,
+    "board_eq_golden": false
+   },
+   {
+    "probe": "img0 @ 66.667 MHz",
+    "board": [
+     -119,
+     6,
+     125
+    ],
+    "golden": [
+     -82,
+     -75,
+     7
+    ],
+    "model": [
+     -119,
+     6,
+     125
+    ],
+    "board_eq_model": true,
+    "board_eq_golden": false
+   },
+   {
+    "probe": "img0 @ 50.000 MHz",
+    "board": [
+     -119,
+     6,
+     125
+    ],
+    "golden": [
+     -82,
+     -75,
+     7
+    ],
+    "model": [
+     -119,
+     6,
+     125
+    ],
+    "board_eq_model": true,
+    "board_eq_golden": false
+   },
+   {
+    "probe": "img0 @ 25.000 MHz",
+    "board": [
+     -119,
+     6,
+     125
+    ],
+    "golden": [
+     -82,
+     -75,
+     7
+    ],
+    "model": [
+     -119,
+     6,
+     125
+    ],
+    "board_eq_model": true,
+    "board_eq_golden": false
+   },
+   {
+    "probe": "img0 roll 1",
+    "board": [
+     -121,
+     -35,
+     86
+    ],
+    "golden": [
+     -57,
+     -5,
+     52
+    ],
+    "model": [
+     -121,
+     -35,
+     86
+    ],
+    "board_eq_model": true,
+    "board_eq_golden": false
+   },
+   {
+    "probe": "img0 roll -1",
+    "board": [
+     -78,
+     -11,
+     67
+    ],
+    "golden": [
+     148,
+     -61,
+     -209
+    ],
+    "model": [
+     -78,
+     -11,
+     67
+    ],
+    "board_eq_model": true,
+    "board_eq_golden": false
+   },
+   {
+    "probe": "img0 roll 4",
+    "board": [
+     -118,
+     -486,
+     -368
+    ],
+    "golden": [
+     77,
+     -320,
+     -397
+    ],
+    "model": [
+     -118,
+     -486,
+     -368
+    ],
+    "board_eq_model": true,
+    "board_eq_golden": false
+   },
+   {
+    "probe": "img0 roll -4",
+    "board": [
+     15,
+     20,
+     5
+    ],
+    "golden": [
+     126,
+     -53,
+     -179
+    ],
+    "model": [
+     15,
+     20,
+     5
+    ],
+    "board_eq_model": true,
+    "board_eq_golden": false
+   },
+   {
+    "probe": "img0 roll 224",
+    "board": [
+     -211,
+     69,
+     280
+    ],
+    "golden": [
+     16,
+     -3,
+     -19
+    ],
+    "model": [
+     -211,
+     69,
+     280
+    ],
+    "board_eq_model": true,
+    "board_eq_golden": false
+   },
+   {
+    "probe": "img0 roll -224",
+    "board": [
+     -115,
+     -166,
+     -51
+    ],
+    "golden": [
+     -63,
+     -256,
+     -193
+    ],
+    "model": [
+     -115,
+     -166,
+     -51
+    ],
+    "board_eq_model": true,
+    "board_eq_golden": false
+   },
+   {
+    "probe": "top half 255",
+    "board": [
+     -337,
+     635,
+     972
+    ],
+    "golden": [
+     -337,
+     635,
+     972
+    ],
+    "model": [
+     -337,
+     635,
+     972
+    ],
+    "board_eq_model": true,
+    "board_eq_golden": true
+   },
+   {
+    "probe": "left half 255",
+    "board": [
+     106,
+     446,
+     340
+    ],
+    "golden": [
+     106,
+     446,
+     340
+    ],
+    "model": [
+     106,
+     446,
+     340
+    ],
+    "board_eq_model": true,
+    "board_eq_golden": true
+   },
+   {
+    "probe": "checker 1px",
+    "board": [
+     -750,
+     1786,
+     2536
+    ],
+    "golden": [
+     -750,
+     1786,
+     2536
+    ],
+    "model": [
+     -750,
+     1786,
+     2536
+    ],
+    "board_eq_model": true,
+    "board_eq_golden": true
+   },
+   {
+    "probe": "px(0,0)=255",
+    "board": [
+     -375,
+     106,
+     481
+    ],
+    "golden": [
+     -375,
+     106,
+     481
+    ],
+    "model": [
+     -375,
+     106,
+     481
+    ],
+    "board_eq_model": true,
+    "board_eq_golden": true
+   },
+   {
+    "probe": "px(0,1)=255",
+    "board": [
+     -375,
+     106,
+     481
+    ],
+    "golden": [
+     -375,
+     106,
+     481
+    ],
+    "model": [
+     -375,
+     106,
+     481
+    ],
+    "board_eq_model": true,
+    "board_eq_golden": true
+   },
+   {
+    "probe": "px(0,2)=255",
+    "board": [
+     -375,
+     106,
+     481
+    ],
+    "golden": [
+     -375,
+     106,
+     481
+    ],
+    "model": [
+     -375,
+     106,
+     481
+    ],
+    "board_eq_model": true,
+    "board_eq_golden": true
+   },
+   {
+    "probe": "px(0,3)=255",
+    "board": [
+     -375,
+     106,
+     481
+    ],
+    "golden": [
+     -375,
+     106,
+     481
+    ],
+    "model": [
+     -375,
+     106,
+     481
+    ],
+    "board_eq_model": true,
+    "board_eq_golden": true
+   },
+   {
+    "probe": "px(1,0)=255",
+    "board": [
+     -349,
+     102,
+     451
+    ],
+    "golden": [
+     -375,
+     106,
+     481
+    ],
+    "model": [
+     -349,
+     102,
+     451
+    ],
+    "board_eq_model": true,
+    "board_eq_golden": false
+   },
+   {
+    "probe": "px(112,112)=255",
+    "board": [
+     -386,
+     114,
+     500
+    ],
+    "golden": [
+     -386,
+     114,
+     500
+    ],
+    "model": [
+     -386,
+     114,
+     500
+    ],
+    "board_eq_model": true,
+    "board_eq_golden": true
+   },
+   {
+    "probe": "px(223,223)=255",
+    "board": [
+     -375,
+     106,
+     481
+    ],
+    "golden": [
+     -386,
+     114,
+     500
+    ],
+    "model": [
+     -375,
+     106,
+     481
+    ],
+    "board_eq_model": true,
+    "board_eq_golden": false
+   }
+  ]
+ },
+ "cls": {
+  "n": 244,
+  "positives": 122,
+  "negatives": 122,
+  "threshold": -646,
+  "ties_at_T": 0,
+  "tp": 117,
+  "fn": 5,
+  "tn": 57,
+  "fp": 65,
+  "sensitivity_wilson": [
+   0.959,
+   0.9076,
+   0.9824
+  ],
+  "specificity_wilson": [
+   0.4672,
+   0.381,
+   0.5554
+  ],
+  "ppv": 0.6429,
+  "npv": 0.9194,
+  "accuracy": 0.7131,
+  "correct": 174,
+  "errors": 70,
+  "auroc": 0.8367,
+  "auroc_boot_ci": [
+   0.7852,
+   0.8837
+  ],
+  "bootstrap": {
+   "resamples": 2000,
+   "seed": 0,
+   "method": "non-stratified resampling of the 244, percentile CI"
+  },
+  "fn_margins": [
+   -736,
+   -719,
+   -712,
+   -712,
+   -670
+  ],
+  "fp_margin_min_q1_median_q3_max": [
+   -639,
+   -318.0,
+   0.0,
+   593.0,
+   1928
+  ],
+  "median_margin_pos": 792.5,
+  "median_margin_neg": -595.5,
+  "negatives_above_T": 65,
+  "threshold_table": {
+   "-646": {
+    "sens": 0.959,
+    "spec": 0.467
+   },
+   "-400": {
+    "sens": 0.885,
+    "spec": 0.566
+   },
+   "-200": {
+    "sens": 0.852,
+    "spec": 0.656
+   },
+   "0": {
+    "sens": 0.779,
+    "spec": 0.738
+   },
+   "200": {
+    "sens": 0.713,
+    "spec": 0.787
+   }
+  },
+  "class3_counts": {
+   "Normal": 46,
+   "No Lung Opacity / Not Normal": 76,
+   "Lung Opacity": 122
+  },
+  "class3_fp": {
+   "Normal": 15,
+   "No Lung Opacity / Not Normal": 50,
+   "Lung Opacity": 0
+  },
+  "class3_tn": {
+   "Normal": 31,
+   "No Lung Opacity / Not Normal": 26,
+   "Lung Opacity": 0
+  },
+  "class3_fp_rate": {
+   "Normal": 0.326,
+   "No Lung Opacity / Not Normal": 0.658
+  },
+  "auroc_pneumonia_vs_normal_244": 0.9583,
+  "auroc_pneumonia_vs_notnormal_244": 0.7632
+ },
+ "demo": {
+  "sha_bit": "7e0c3394fac1b57d",
+  "gallery_images": [
+   0,
+   6,
+   7,
+   9,
+   10,
+   11,
+   3,
+   4,
+   5,
+   8,
+   20,
+   23
+  ],
+  "gallery_exact": 12,
+  "gallery_fpga_ms": [
+   185.1,
+   184.9,
+   184.9,
+   184.9,
+   185.0,
+   184.9,
+   184.9,
+   184.9,
+   184.9,
+   185.1,
+   184.9,
+   184.9
+  ],
+  "gallery_arm_ms": [
+   705.2,
+   731.1,
+   699.1,
+   710.2,
+   704.8,
+   702.0,
+   706.7,
+   705.2,
+   701.8,
+   703.7,
+   704.7,
+   704.0
+  ],
+  "mean_fpga_ms": 185.0,
+  "mean_arm_ms": 706.6,
+  "mean_speedup": 3.8,
+  "sweep_bit_exact": 244,
+  "sweep_wall_s": 56.5,
+  "image_load_ms": 50.0,
+  "auroc_printed": 0.8367
+ },
+ "latency": {
+  "cycles": 12196126,
+  "fclk0_mhz": 66.666667,
+  "compute_ms": 182.94,
+  "compute_ips": 5.47,
+  "end_to_end_ms": 184.729,
+  "host_overhead_ms": 1.79,
+  "end_to_end_runs_ms": [
+   184.729,
+   184.706,
+   184.701
+  ],
+  "arm_ms": [
+   743.9,
+   726.3,
+   665.1
+  ],
+  "speedup_vs_arm": [
+   3.64,
+   4.07
+  ],
+  "conv_macs": 12192768,
+  "total_macs": 12192896,
+  "macs_per_layer": {
+   "conv1": 903168,
+   "conv2": 3612672,
+   "conv3": 3612672,
+   "conv4": 2709504,
+   "conv5": 1354752,
+   "fc": 128
+  },
+  "cycles_minus_macs": 3230,
+  "ms_at_75mhz_derived": 162.62,
+  "overhead_pct": 0.97,
+  "gap_stream_cycles": 3136,
+  "sequencing_and_drain_cycles": 94,
+  "full_test_set_images": 4003,
+  "full_test_set_compute_min": 12.2,
+  "pc_golden": {
+   "ms_per_image": 8.7,
+   "runs": 21,
+   "min_ms": 8.4,
+   "max_ms": 12.5,
+   "model_load_s": 0.006,
+   "image": 0,
+   "result": [
+    -82,
+    -75
+   ],
+   "cpu": "13th Gen Intel(R) Core(TM) i7-13650HX",
+   "python": "3.13.9",
+   "numpy": "2.3.5",
+   "os": "Windows-11-10.0.26200-SP0",
+   "date": "2026-10-09",
+   "note": "single process, NumPy int64, same golden model the board ARM baseline runs"
+  }
+ },
+ "impl": {
+  "available": {
+   "lut": 53200,
+   "ff": 106400,
+   "bram": 140,
+   "dsp": 220
+  },
+  "v1_2": {
+   "timing": {
+    "wns": 0.206,
+    "failing_setup": 0,
+    "endpoints": 15320,
+    "whs": 0.024,
+    "failing_hold": 0,
+    "critical": {
+     "source": "flash_bd_i/top_v1_axi_0/inst/u_core/u_conv/y_reg[3]/C",
+     "dest": "flash_bd_i/top_v1_axi_0/inst/u_core/u_ram_a/mem_reg_0_2/ADDRBWRADDR[15]",
+     "requirement_ns": 14.999,
+     "data_path_ns": 14.069,
+     "logic_ns": 7.708,
+     "route_ns": 6.361,
+     "levels": 10,
+     "cells": "CARRY4=6 DSP48E1=1 LUT2=1 LUT5=2"
+    }
+   },
+   "util": {
+    "flash_bd_wrapper": {
+     "lut": 3818,
+     "ff": 4745,
+     "ramb36": 81,
+     "ramb18": 1,
+     "dsp": 14
+    },
+    "axi_dma_0": {
+     "lut": 480,
+     "ff": 743,
+     "ramb36": 1,
+     "ramb18": 0,
+     "dsp": 0
+    },
+    "axi_mem_intercon": {
+     "lut": 43,
+     "ff": 88,
+     "ramb36": 0,
+     "ramb18": 0,
+     "dsp": 0
+    },
+    "ps7_0_axi_periph": {
+     "lut": 519,
+     "ff": 675,
+     "ramb36": 0,
+     "ramb18": 0,
+     "dsp": 0
+    },
+    "top_v1_axi_0": {
+     "lut": 2759,
+     "ff": 3206,
+     "ramb36": 80,
+     "ramb18": 1,
+     "dsp": 14
+    }
+   },
+   "power": {
+    "total_w": 1.492,
+    "dynamic_w": 1.349,
+    "static_w": 0.144,
+    "ps7_w": 1.256,
+    "bram_w": 0.06,
+    "junction_c": 42.2,
+    "confidence": "Medium"
+   },
+   "pct": {
+    "lut": 7.18,
+    "ff": 4.46,
+    "bram": 58.21,
+    "dsp": 6.36
+   },
+   "bram_tiles": 81.5
+  },
+  "v1_2_hp64": {
+   "timing": {
+    "wns": 0.314,
+    "failing_setup": 0,
+    "endpoints": 15451,
+    "whs": 0.03,
+    "failing_hold": 0,
+    "critical": {
+     "source": "flash_bd_i/top_v1_axi_0/inst/u_core/u_conv/fm_rd_addr3/CLK",
+     "dest": "flash_bd_i/top_v1_axi_0/inst/u_core/u_ram_a/mem_reg_3_3/ADDRBWRADDR[13]",
+     "requirement_ns": 14.999,
+     "data_path_ns": 13.786,
+     "logic_ns": 9.687,
+     "route_ns": 4.099,
+     "levels": 3,
+     "cells": "DSP48E1=2 LUT5=1"
+    }
+   },
+   "util": {
+    "flash_bd_wrapper": {
+     "lut": 3864,
+     "ff": 4766,
+     "ramb36": 81,
+     "ramb18": 2,
+     "dsp": 14
+    },
+    "axi_dma_0": {
+     "lut": 528,
+     "ff": 764,
+     "ramb36": 1,
+     "ramb18": 1,
+     "dsp": 0
+    },
+    "axi_mem_intercon": {
+     "lut": 44,
+     "ff": 88,
+     "ramb36": 0,
+     "ramb18": 0,
+     "dsp": 0
+    },
+    "ps7_0_axi_periph": {
+     "lut": 518,
+     "ff": 675,
+     "ramb36": 0,
+     "ramb18": 0,
+     "dsp": 0
+    },
+    "top_v1_axi_0": {
+     "lut": 2758,
+     "ff": 3206,
+     "ramb36": 80,
+     "ramb18": 1,
+     "dsp": 14
+    }
+   },
+   "power": {
+    "total_w": 1.494,
+    "dynamic_w": 1.35,
+    "static_w": 0.144,
+    "ps7_w": 1.256,
+    "bram_w": 0.06,
+    "junction_c": 42.2,
+    "confidence": "Medium"
+   },
+   "pct": {
+    "lut": 7.26,
+    "ff": 4.48,
+    "bram": 58.57,
+    "dsp": 6.36
+   },
+   "bram_tiles": 82.0
+  },
+  "v1_2_hp64_led": {
+   "timing": {
+    "wns": 0.344,
+    "failing_setup": 0,
+    "endpoints": 15704,
+    "whs": 0.025,
+    "failing_hold": 0,
+    "critical": {
+     "source": "flash_bd_i/top_v1_axi_0/inst/u_core/u_conv/stride_r_reg[1]/C",
+     "dest": "flash_bd_i/top_v1_axi_0/inst/u_core/u_ram_a/mem_reg_3_7/ADDRBWRADDR[7]",
+     "requirement_ns": 14.999,
+     "data_path_ns": 13.861,
+     "logic_ns": 7.825,
+     "route_ns": 6.036,
+     "levels": 11,
+     "cells": "CARRY4=7 DSP48E1=1 LUT2=1 LUT4=1 LUT5=1"
+    }
+   },
+   "util": {
+    "flash_bd_wrapper": {
+     "lut": 3947,
+     "ff": 4899,
+     "ramb36": 81,
+     "ramb18": 2,
+     "dsp": 14
+    },
+    "axi_dma_0": {
+     "lut": 528,
+     "ff": 764,
+     "ramb36": 1,
+     "ramb18": 1,
+     "dsp": 0
+    },
+    "axi_gpio_led": {
+     "lut": 64,
+     "ff": 132,
+     "ramb36": 0,
+     "ramb18": 0,
+     "dsp": 0
+    },
+    "axi_mem_intercon": {
+     "lut": 43,
+     "ff": 88,
+     "ramb36": 0,
+     "ramb18": 0,
+     "dsp": 0
+    },
+    "ps7_0_axi_periph": {
+     "lut": 539,
+     "ff": 676,
+     "ramb36": 0,
+     "ramb18": 0,
+     "dsp": 0
+    },
+    "top_v1_axi_0": {
+     "lut": 2757,
+     "ff": 3206,
+     "ramb36": 80,
+     "ramb18": 1,
+     "dsp": 14
+    }
+   },
+   "power": {
+    "total_w": 1.499,
+    "dynamic_w": 1.352,
+    "static_w": 0.147,
+    "ps7_w": 1.256,
+    "bram_w": 0.06,
+    "junction_c": 42.3,
+    "confidence": "Low"
+   },
+   "pct": {
+    "lut": 7.42,
+    "ff": 4.6,
+    "bram": 58.57,
+    "dsp": 6.36
+   },
+   "bram_tiles": 82.0
+  }
+ },
+ "synth_v1_2": {
+  "wns": 0.085,
+  "endpoints": 9477,
+  "whs": 0.079,
+  "lut": 2675,
+  "ff": 2845,
+  "bram_tiles": 80.5,
+  "dsp": 14
+ }
+}

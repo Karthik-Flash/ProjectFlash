@@ -82,7 +82,7 @@ Full analysis: [`V1_board_debug_log.md`](V1_board_debug_log.md).
 - **Model.** `board == golden(dup_even(x))`: every odd 32-bit input word is
   replaced by the even word before it. This matches 244/244 images and 24/24
   probes (Derived). It predicted the two probes that separate it from the
-  golden model before they were run: px(1,0) → (−349, 102, 451) and
+  golden model before their board results were looked at: px(1,0) → (−349, 102, 451) and
   px(223,223) → the const-0 result. Both came out as predicted.
 - **Mechanism.** The design had a 32-bit HP0 port, but the HP0 AFI was in
   64-bit mode (RDCHAN_CTRL bit 0 = 0). PYNQ does not run the design's
