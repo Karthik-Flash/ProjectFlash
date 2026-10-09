@@ -18,6 +18,7 @@
 #
 # Optional input:  ::flash_fclk_max  (MHz, default 75.0). FCLK0 is lowered
 # until the PS's ACTUAL frequency is <= this value.
+# Optional input:  ::flash_led (0/1, default 0): add axi_gpio_led for the board LEDs.
 # Output:          ::flash_fclk_actual (MHz, string as Vivado reports it)
 
 if {![info exists ::flash_fclk_max]} { set ::flash_fclk_max 75.0 }
@@ -120,6 +121,25 @@ set_property CONFIG.NUM_PORTS {2} $cc
 connect_bd_net [get_bd_pins top_v1_axi_0/irq_done]    [get_bd_pins xlconcat_0/In0]
 connect_bd_net [get_bd_pins axi_dma_0/mm2s_introut]   [get_bd_pins xlconcat_0/In1]
 connect_bd_net [get_bd_pins xlconcat_0/dout]          [get_bd_pins processing_system7_0/IRQ_F2P]
+
+# ---- Optional board LEDs (::flash_led = 1; flash_hp64_led build) ----------
+# axi_gpio_led on the GP0 AXI-Lite interconnect, both channels outputs only,
+# pins from the PYNQ-Z2 board files via board automation (none typed here):
+#   GPIO  (ch1, 0x00) = leds_4bits  LD0..LD3, bit n = LDn
+#   GPIO2 (ch2, 0x08) = rgb_led     6 bits "RGBRGB": bit0/1/2 = LD4 B/G/R,
+#                                   bit3/4/5 = LD5 B/G/R
+if {[info exists ::flash_led] && $::flash_led} {
+    set gpio [create_bd_cell -type ip -vlnv xilinx.com:ip:axi_gpio:2.0 axi_gpio_led]
+    set_property -dict [list CONFIG.C_IS_DUAL {1}         CONFIG.GPIO_BOARD_INTERFACE {leds_4bits} CONFIG.GPIO2_BOARD_INTERFACE {rgb_led}] $gpio
+    apply_bd_automation -rule xilinx.com:bd_rule:board -config {Board_Interface {leds_4bits} Manual_Source {Auto}}         [get_bd_intf_pins axi_gpio_led/GPIO]
+    apply_bd_automation -rule xilinx.com:bd_rule:board -config {Board_Interface {rgb_led} Manual_Source {Auto}}         [get_bd_intf_pins axi_gpio_led/GPIO2]
+    apply_bd_automation -rule xilinx.com:bd_rule:axi4 -config {         Clk_master {Auto} Clk_slave {Auto} Clk_xbar {Auto}         Master {/processing_system7_0/M_AXI_GP0} Slave {/axi_gpio_led/S_AXI}         ddr_seg {Auto} intc_ip {/ps7_0_axi_periph} master_apm {0}}         [get_bd_intf_pins axi_gpio_led/S_AXI]
+    # The board interface owns C_ALL_OUTPUTS (stays 0: ports are tri_io), so
+    # software must write GPIO_TRI = 0 (0x04 ch1, 0x0C ch2) before GPIO_DATA.
+    foreach p {C_IS_DUAL C_ALL_OUTPUTS C_GPIO_WIDTH C_ALL_OUTPUTS_2 C_GPIO2_WIDTH GPIO_BOARD_INTERFACE GPIO2_BOARD_INTERFACE} {
+        puts "FLASH_LED: $p = [get_property CONFIG.$p $gpio]"
+    }
+}
 
 # ---- Addresses, validate, save -----------------------------------------
 assign_bd_address

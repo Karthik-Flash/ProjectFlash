@@ -2,7 +2,7 @@
 #
 # Run from the repo root (batch):
 #   C:\Xilinx\Vivado\2022.2\bin\vivado.bat -mode batch -notrace ^
-#       -source v1/scripts/build_hw.tcl -tclargs <project.xpr> [fclk_max_mhz] [board_name]
+#       -source v1/scripts/build_hw.tcl -tclargs <project.xpr> [fclk_max_mhz] [board_name] [led]
 #
 # <project.xpr> : the main project is verilog/ProjectFlashV1_hw/ProjectFlashV1_hw.xpr.
 #                 If the file does not exist, a project is created there with
@@ -11,6 +11,7 @@
 # fclk_max_mhz  : FCLK0 ceiling, default 75.0 (see create_bd.tcl).
 # board_name    : basename of the copies in v1/board/, default flash
 #                 (V1.2.1 builds use flash_hp64).
+# led           : 1 adds axi_gpio_led (board LEDs), default 0.
 #
 # Steps: add top_v1_axi.v (sources_1) and tb_v1_axi.v (sim_1, tb_v1 stays the
 # sim top); disable v1.xdc; source create_bd.tcl; synth + impl + bitstream;
@@ -21,6 +22,7 @@ set repo  [file normalize [file dirname [info script]]/../..]
 set xpr   [file normalize [lindex $argv 0]]
 set ::flash_fclk_max [expr {[llength $argv] > 1 ? [lindex $argv 1] : 75.0}]
 set board_name [expr {[llength $argv] > 2 ? [lindex $argv 2] : "flash"}]
+set ::flash_led [expr {[llength $argv] > 3 ? [lindex $argv 3] : 0}]
 # Report tag: docs/V1_impl_*_v1_2.rpt for the default build, *_v1_2_hp64.rpt etc. otherwise.
 set rpt_tag [expr {$board_name eq "flash" ? "v1_2" : "v1_2_[string map {flash_ {}} $board_name]"}]
 set inc   $repo/v1/mem/v1_2/flash_v1_2

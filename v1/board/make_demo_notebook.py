@@ -33,7 +33,7 @@ model that defines the correct answer.
 md("## Load the overlay and check the board"),
 code(r"""
 from pynq import Overlay, allocate, Clocks, MMIO
-import numpy as np, time, hashlib, re, sys
+import numpy as np, time, hashlib, re, sys, os
 
 try:
     import matplotlib.pyplot as plt
@@ -42,7 +42,9 @@ except ImportError:
     HAVE_MPL = False
     print('matplotlib not available: images are skipped, tables still print')
 
-BIT, HWH = 'flash_hp64.bit', 'flash_hp64.hwh'
+# flash_hp64_led = flash_hp64 + an AXI GPIO for the board LEDs (same accelerator)
+BIT = 'flash_hp64_led.bit' if os.path.exists('flash_hp64_led.bit') else 'flash_hp64.bit'
+HWH = BIT[:-4] + '.hwh'
 ol  = Overlay(BIT)
 dma = ol.axi_dma_0
 acc = ol.top_v1_axi_0
@@ -99,10 +101,56 @@ def run(x, thr=THR):
 def expected(k):
     return (int(E0[k]), int(E1[k]), int(EM[k]), int(ED[k]))
 
+# ---- board LEDs (axi_gpio_led; no-op if this overlay has none) ----
+# ch1 GPIO_DATA 0x00 = LD0..LD3 (bit n = LDn); ch2 GPIO2_DATA 0x08 = RGB LD4/LD5,
+# 6 bits "RGBRGB": bit0/1/2 = LD4 blue/green/red, bit3/4/5 = LD5 blue/green/red.
+# The board-file ports are tri-state, so both TRI registers (0x04, 0x0C) are set
+# to 0 (= output) once here.
+LD_ALL, RED, GREEN, BLUE = 0xF, 0x24, 0x12, 0x09
+HAVE_LED = 'axi_gpio_led' in ol.ip_dict
+if HAVE_LED:
+    gpio = MMIO(ol.ip_dict['axi_gpio_led']['phys_addr'], 0x10000)
+    gpio.write(0x04, 0); gpio.write(0x0C, 0)
+else:
+    print('note: no axi_gpio_led in this overlay -> LED code is a no-op')
+
+def leds(ld=0, rgb=0):
+    if HAVE_LED:
+        gpio.write(0x00, ld); gpio.write(0x08, rgb)
+
+def show_decision(decision):
+    # pneumonia: LD0-LD3 blink ~4 Hz for 2.5 s, RGB red; negative: RGB green 1.5 s
+    if not HAVE_LED:
+        return
+    if decision == 1:
+        for i in range(20):                    # 20 x 125 ms = 2.5 s, 4 Hz blink
+            leds(LD_ALL if i % 2 == 0 else 0, RED)
+            time.sleep(0.125)
+    else:
+        leds(0, GREEN)
+        time.sleep(1.5)
+    leds(0, 0)
+leds(0, 0)
+
 t = time.perf_counter(); _ = img(0); t_parse = (time.perf_counter() - t) * 1e3
 print(f'image load: {t_parse:.0f} ms per .mem file')
 """),
 # ---- (3) gallery ----------------------------------------------------------------
+md("""
+## LED self-test
+
+LD0-LD3 on for 1 s, then both RGB LEDs red, green and blue for 0.5 s each,
+then off. Skipped (with a note) if the overlay has no LED GPIO.
+"""),
+code("""
+if HAVE_LED:
+    print('LD0-LD3 on'); leds(LD_ALL, 0); time.sleep(1.0)
+    for name, c in (('red', RED), ('green', GREEN), ('blue', BLUE)):
+        print(f'RGB {name}'); leds(0, c); time.sleep(0.5)
+    leds(0, 0); print('LEDs off')
+else:
+    print('no LED GPIO in this overlay: self-test skipped')
+"""),
 md("""
 ## Gallery: 12 images, FPGA vs ARM
 
@@ -192,7 +240,8 @@ md("""
 ## Try any image
 
 Move the slider to run any of the 244 images live. Without ipywidgets, set
-`IDX` and re-run the cell.
+`IDX` and re-run the cell. On the LED overlay the board shows the decision:
+pneumonia = RGB red with LD0-LD3 blinking (2.5 s), negative = RGB green (1.5 s).
 """),
 code("""
 def show(k):
@@ -207,6 +256,7 @@ def show(k):
         plt.title(title, fontsize=9); plt.axis('off'); plt.show()
     else:
         print(title)
+    show_decision(r[3])          # LEDs: red + blinking LD0-LD3 = pneumonia, green = negative
 
 IDX = 0
 try:
@@ -249,7 +299,10 @@ if HAVE_MPL:
     plt.tight_layout(); plt.show()
 """),
 # ---- (7) cleanup ----------------------------------------------------------------------
-code("buf.freebuffer()"),
+code("""
+leds(0, 0)
+buf.freebuffer()
+"""),
 ]
 
 nb = {"cells": cells, "metadata": {"kernelspec": {"display_name": "Python 3", "language": "python", "name": "python3"},
