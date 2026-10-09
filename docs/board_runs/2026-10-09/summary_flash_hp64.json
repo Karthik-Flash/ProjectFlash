@@ -1,0 +1,31 @@
+{
+ "bit": "flash_hp64.bit",
+ "sha_bit": "0ee58d6c924cd162",
+ "sha_hwh": "7011237c69968c86",
+ "pynq_version": "3.1.1",
+ "fclk0_mhz": 66.666667,
+ "hwh_hp0_width": 64,
+ "afi_bit0_at_load": 0,
+ "afi_bit0_now": 0,
+ "afi_force": false,
+ "n_exact": 244,
+ "exact_per_field": {
+  "logit0": 244,
+  "logit1": 244,
+  "margin": 244,
+  "decision": 244
+ },
+ "tp": 117,
+ "fn": 5,
+ "tn": 57,
+ "fp": 65,
+ "cycles_min": 12196126,
+ "cycles_max": 12196126,
+ "wall_s": 153.8,
+ "date": "2025-05-04T09:28:38",
+ "throughput_ms_per_image": 184.729,
+ "throughput_images_per_s": 5.413,
+ "throughput_exact": 244,
+ "arm_ms_image0": 743.9,
+ "arm_model_load_s": 0.2
+}

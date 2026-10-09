@@ -1,0 +1,9 @@
+# Raw board evidence is stored byte for byte (no CRLF/LF conversion), so the
+# SHA-256 prefixes in docs/board_runs/*/README.md hold on every checkout.
+docs/board_runs/** -text
+
+# Bitstreams and hardware handoffs are kept exactly as Vivado wrote them; the
+# SHA-256 prefixes quoted in the docs and printed by the notebooks refer to
+# these bytes.
+*.bit binary
+v1/board/*.hwh -text
