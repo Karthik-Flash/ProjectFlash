@@ -41,8 +41,12 @@ measured values; **Not yet done** means no number exists.
 | FPGA vs the board's ARM (same NumPy model) | 3.6–4.1× faster (ARM 665–744 ms) | Derived |
 | Model quality, 4,003 unseen test patients | AUROC **0.8229** (95% CI 0.8083–0.8379); sensitivity 91.0% / specificity 53.9% at the chosen threshold | Measured |
 | On the 244 verification images, computed by the board | sensitivity 0.959, specificity 0.467, AUROC 0.837 | Measured / Derived |
+| Compute rate | 0.1333 GOP/s, 99.97% of the 1-MAC-per-clock peak (12,192,896 MACs in 12,196,126 cycles) | Derived |
 | Chip power | 1.494 W, of which 1.256 W is the ARM side | Synthesis estimate |
-| Measured board power; full 4,003-image board run; DICOM end to end on the board | — | Not yet done |
+| Energy per image | 273 mJ whole chip, 43.5 mJ programmable logic | Derived from the Synthesis estimate |
+
+A board run on all 4,003 test images, measured board power and DICOM end to
+end on the board are [V2 future work](#v2-future-work), not V1 results.
 
 **Headline results.**
 
@@ -55,13 +59,60 @@ measured values; **Not yet done** means no number exists.
   flipping that one register bit (0/244 → 244/244). See report §10.
 - **One engine, any resolution.** A single 3×3 convolution engine, driven by
   a layer table in on-chip memory, runs 28×28 and 224×224 with the same
-  Verilog.
+  Verilog (next section).
+- **An honest model.** It separates pneumonia from clearly normal lungs well
+  (test AUROC 0.936) and from other lung findings much less well (0.738).
+  Knowing only whether the film is AP or PA already scores 0.706, so part of
+  its score is a shortcut. Report §5 and §9.4 show this with figures.
+
+## How V1 scales to 224×224: the convolution layers and RTL
+
+**Where v0 stopped.** The audited v0 accelerator was a fixed 28×28 design.
+Each stage was a hand-written Verilog module (`line_buffer`, `mac_unit`,
+`max_pool`, `fc_layer`, ...) with its sizes built in, stepped by a fixed
+state machine. Its classifier flattened a 4×14×14 feature map into a 784→16
+dense layer. Flatten plus the dense layers held 99.7% of its 12,634
+parameters, and that count is tied to the resolution: at 224×224 the first
+dense layer alone would need 802,816 weights.
+
+**What V1 changed.**
+
+| Change | What it buys |
+|---|---|
+| Five 3×3 convolutions, stride 2, padding 1, channels 1→8→16→32→48→64, instead of pooling | Each layer halves the map; no separate pooling stage (where one v0 bug lived) |
+| Global average pooling before the classifier | The dense layer stays 64→2 at any resolution: 47,602 parameters, independent of image size |
+| One reusable `conv_engine`, configured at run time by a 128-bit descriptor per layer (op, kernel, stride, pad, in/out channels, in/out height and width, shift, weight and bias base), held in a ROM and walked by `layer_seq` | Changing the network means regenerating a table, not rewriting Verilog |
+| Two feature-map buffers, A and B, used ping-pong | Each layer reads one and writes the other |
+| Padding as gated reads | An out-of-image tap reads as zero; no padded frame is stored |
+| A 22-bit accumulator, sized from the real trained weights | Guaranteed not to overflow for any 8-bit input image |
+| Shift and clamp to 0..255 as the ReLU | One shift per layer, no multiplier-based rescaling |
+| GAP divides by 64 instead of 49, as a shift | A wire, not a divider; training uses the same arithmetic |
+| A threshold register (AXI-Lite) | The operating point changes without retraining |
+
+**What 28×28 → 224×224 needed.** New `.mem` files (weights, biases, layer
+table) and one RTL change: `fmap_ram` grew from 64 KB to 128 KB, because
+conv1's output at 224×224 is 8×112×112 = 100,352 bytes.
+
+**What it cost.**
+- **Work:** 227,360 MACs per image become 12,192,896, ×53.6, derived from
+  the two layer tables (the pixel count grows ×64).
+- **Memory:** block RAM grew from 48.5 tiles to 80.5 for the core alone, in
+  synthesis.
+- **Clock:** the convolution's address arithmetic (a DSP multiply-add into
+  the block-RAM address) became the critical path, so V1 runs at 66.67 MHz.
+
+**The AXI wrapper.** `top_v1_axi` wraps the unchanged core for the Zynq. It
+takes a 32-bit AXI-Stream carrying 4 pixels per beat, exposes AXI-Lite
+registers (control, status, threshold, logits, margin, decision, version),
+and has a cycle counter that gives the measured 12,196,126 cycles. The full
+story is in report §6.5.
 
 ## Repository map
 
 ```
 PROJECT_FLASH_REPORT.md   the V1 project report (start here)
 README.md                 this page
+paper/                    IEEE-format conference paper (flash_v1.tex, refs.bib, figures/)
 colab/                    training + export notebooks (ProjectFlash_V1.ipynb is the source of truth)
 v1/                       current design (V1.x)
   rtl/                    Verilog: conv_engine, layer_seq, fmap_ram, gap_unit, fc_unit, decision, top_v1, top_v1_axi
@@ -108,3 +159,18 @@ looking at the model's confidence. The model gets 70 of them wrong, and the
 hardware must reproduce those mistakes too, because a matching 32-bit score
 cannot happen by accident. Every derived number in the report is recomputed
 from the repository by `tools/make_report_figures.py`.
+
+## V2 future work
+
+The project pauses after V1. Three items would make the board, rather than
+software, the source of every number:
+
+- **Board run on all 4,003 test images.** The 4,003-image accuracy is the
+  golden model's, which is bit-exact to the board on 244; a full board run
+  would make it literally the board's output.
+- **Measured board power.** Power so far is only a Vivado estimate.
+- **DICOM end to end on the board.** DICOM preprocessing has only been
+  verified on the PC.
+
+After those: a clinical operating point with better specificity, parallel
+MACs, and a pipelined address path for 75 MHz or more (report §13).
