@@ -4,7 +4,8 @@
 
 Karthikeya Reddy and Yashwant Rajesh · BITS Pilani Hyderabad ·
 [github.com/Karthik-Flash/ProjectFlash](https://github.com/Karthik-Flash/ProjectFlash) ·
-report of 2026-10-09, tag `v1.2.1-hw`
+report of 2026-10-09, revised 2026-10-11 (figures, accelerator metrics,
+scaling section), tag `v1.2.1-hw` · paper version in [`paper/`](paper/README.md)
 
 > **Research prototype. Not a medical device.** Nothing here is cleared or
 > validated for clinical use.
@@ -55,7 +56,11 @@ methodological result of this report (Section 10).
 | Sensitivity / specificity at the chosen threshold, test set | 91.0% / 53.9% | Measured | `manifest.json` |
 | Same on the 244 images, computed by the board | 0.959 / 0.467 | Measured | `results_flash_hp64.csv` |
 | Chip power | 1.494 W total (1.256 W in the ARM side) | Synthesis estimate | `docs/reports/impl/V1_impl_power_v1_2_hp64.rpt` |
-| Board power measurement, full 4,003-image board run, DICOM end to end on the board | — | Not yet done | — |
+| Throughput and efficiency | 0.1333 GOP/s, 99.97% of the 1-MAC-per-clock peak | Derived | `derived_numbers.json` (`accel`) |
+
+Three things are V2 future work, not V1 results (Section 13): a board run on
+all 4,003 test images, measured board power, and DICOM end to end on the
+board.
 
 ---
 
@@ -80,8 +85,8 @@ clinician prioritise, not to replace a radiologist.
 We chose an FPGA rather than a phone or a small computer for one main reason:
 the chip computes exactly what we validated, every time, with no operating
 system or floating-point library in the way. That property is easy to test
-and easy to explain to a regulator. Low power is the second reason, and it
-has not yet been measured (Section 12).
+and easy to explain to a regulator. Low power is the second reason; so far
+it rests on a Vivado estimate, and measuring it is V2 work (Section 13).
 
 ---
 
@@ -175,14 +180,11 @@ about 83.7 MHz possible (Measured), and a SAIF-based power analysis gives
 accuracy on PneumoniaMNIST. That is lower than the hackathon's 95.4%, which
 the buggy hardware could never have produced.
 
-**Why V1.** In v0, 99% of the weights sat in one dense layer whose size was
-tied to the 28×28 image. Every layer was a separate hand-written module. The
-decision had no adjustable threshold. PneumoniaMNIST is tiny and pre-shrunk.
-V1 replaced all four: a global-average-pooling network that runs at any
-resolution, one convolution engine driven by a layer table, a threshold
-register, and real hospital-format images (RSNA) at 224×224. V1.0 tested the
-new architecture on PneumoniaMNIST, V1.1 on RSNA at 28×28, and V1.2 on RSNA
-at 224×224.
+**Why V1.** v0 was tied to 28×28 by its dense layer and built from
+hand-written per-layer modules. It had no adjustable threshold, and it used
+tiny, pre-shrunk PneumoniaMNIST images. V1 replaced all four (Section 6.5).
+V1.0 tested the new architecture on PneumoniaMNIST, V1.1 on RSNA at 28×28,
+and V1.2 on RSNA at 224×224.
 
 **On hardware.** On 2026-10-07 the AXI wrapper, block design and bitstream
 were built. The first board run, on 2026-10-08, gave 0/244. The fault was
@@ -240,8 +242,12 @@ rules exactly:
 - Pixels and activations are unsigned 8-bit; weights are signed 8-bit;
   biases are 32-bit.
 - conv output = bias + Σ weight × pixel over the 3×3 window and every input
-  channel, held in a 22-bit accumulator. The range seen on 8,006 validation
-  and test images fits with margin (manifest `acc_stats`).
+  channel, held in a 22-bit accumulator. The width comes from the trained
+  weights themselves: per output channel, Σ max(w, 0)·255 + b and
+  Σ min(w, 0)·255 + b bound the sum for *any* 8-bit image, and the widest
+  layer needs 22 bits (`colab/ProjectFlash_V1.ipynb`, hardware-sizing cell).
+  The range actually seen on 8,006 validation and test images is well inside
+  it (manifest `acc_stats`).
 - The sum is shifted right by a per-layer amount (7, 7, 7, 8, 8) and clamped
   to 0..255.
 - GAP sums each 7×7 map and shifts right by 6, i.e. divides by 64 instead of
@@ -262,16 +268,31 @@ locked before the test set was examined. For V1.2, T = −646 (manifest).
 | AUROC (95% CI) | 0.8143 (0.7988–0.8299) | **0.8229 (0.8083–0.8379)** |
 | Sensitivity / specificity at T | 89.1% / 54.7% | 91.0% / 53.9% |
 | PPV / NPV at T | 36.4% / 94.5% | 36.5% / 95.4% |
-| AUROC, pneumonia vs clearly normal | 0.9328 | 0.9363 |
-| AUROC, pneumonia vs other lung findings | 0.7257 | 0.7382 |
 | AUROC from the view position (AP/PA) alone | 0.7064 | 0.7064 |
-| AUROC within AP / within PA films | 0.7346 / 0.7472 | 0.7429 / 0.7661 |
 
-Larger images help a little, but the confidence intervals overlap. A "clear"
-result can be trusted (NPV 95.4%). A "flag" means "get this checked". The
-network separates pneumonia from clearly normal lungs well, and other lung
-findings much less well. Part of the score comes from a shortcut: knowing
-only whether the film is AP (bedside, sicker patients) or PA scores 0.706.
+Larger images help a little, but the confidence intervals overlap. V1.1's
+subgroup AUROCs are all within 0.02 of V1.2's (`docs/audits/V1_audit_v1_2.md`,
+"V1.1 vs V1.2"). Figure 2 breaks
+V1.2's test AUROC down by subgroup.
+
+![Subgroup AUROC](docs/figures/fig_subgroup_auroc.png)
+
+*Figure 2. Test-set AUROC by subgroup (Measured, `manifest.json`). The
+all-test interval is the manifest's bootstrap; the subgroup intervals are
+Derived with the Hanley–McNeil formula, which overall gives a slightly wider
+0.805–0.840. Bottom row: the board's own AUROC on the 244, with a bootstrap
+interval.*
+
+What a reviewer should take from Figure 2:
+- The network separates pneumonia from clearly normal lungs well (0.936),
+  and from other lung findings much less well (0.738).
+- Within AP films or within PA films alone it scores only 0.74–0.77, while
+  knowing nothing but the film type scores 0.706. Part of the overall 0.823
+  therefore comes from a shortcut: AP films are taken at the bedside, of
+  sicker patients.
+- Men and women score the same within error (0.821 and 0.826).
+- A "clear" result can be trusted (NPV 95.4%). A "flag" means "get this
+  checked" (Section 9.4).
 
 ---
 
@@ -301,7 +322,7 @@ flowchart LR
     D -- "GP0 AXI-Lite 0x41200000" --> H
 ```
 
-*Figure 2. What runs where. The PS handles I/O, buffers, control, the user
+*Figure 3. What runs where. The PS handles I/O, buffers, control, the user
 interface and LED writes. The PL does all of the inference, plus the DMA and
 the GPIO.*
 
@@ -324,11 +345,8 @@ back two logits, the margin, the decision and a cycle count.
 | `top_v1_axi` | The AXI wrapper (V1 hardware addition, below). |
 | `line_buffer_v1` | A streaming window generator, built and tested but not instantiated; ready for a faster engine later. |
 
-**The layer table.** Each layer is one 128-bit word: its type, kernel,
-stride, padding, channel counts, input and output sizes, shift amount, and
-where its weights and biases start. To change the network, regenerate this
-table and the weight file; the Verilog stays the same. That is how one
-circuit runs both 28×28 and 224×224.
+**The layer table** holds one 128-bit word per layer. To change the network,
+regenerate it and the weight file; the Verilog stays the same (Section 6.5).
 
 ```mermaid
 flowchart LR
@@ -345,7 +363,7 @@ flowchart LR
     IN["pixels from the wrapper"] --> A
 ```
 
-*Figure 3. Inside `top_v1`. The input image lands in buffer A; conv1 reads A
+*Figure 4. Inside `top_v1`. The input image lands in buffer A; conv1 reads A
 and writes B, conv2 reads B and writes A, and so on. GAP reads conv5's output
 from B.*
 
@@ -397,6 +415,66 @@ M14) and channel 2 drives the two RGB LEDs (6 bits: bits 0/1/2 = LD4
 blue/green/red, bits 3/4/5 = LD5). Both pin sets come from the PYNQ-Z2 board
 files through Vivado's board automation; no pin was typed by hand.
 
+### 6.5 How V1 scales to 224×224
+
+**v0's limits.** v0 was a fixed 28×28 design. Each stage was its own
+hand-written module (`line_buffer`, `mac_unit`, `relu`, `max_pool`,
+`fc_layer`), with its sizes built in and a fixed state machine
+(`fsm_control`) stepping through them. Its classifier flattened the 4×14×14
+feature map into 784 values for a 784→16 dense layer. Flatten plus the two dense layers held
+12,594 of its 12,634 parameters, 99.7% (Derived from the layer table in
+`v0_baseline/README.md`). That layer grows with the image: at 224×224 the
+same head would have 50,176 inputs and 802,816 weights in its first dense
+layer alone (Derived).
+
+**What V1 changed.**
+- **Stride-2 convolutions instead of pooling.** Five 3×3 convolutions,
+  stride 2, padding 1, channels 1→8→16→32→48→64. Each halves the feature map,
+  and the separate pooling stage (where one v0 bug lived) is gone.
+- **GAP before the classifier.** Global average pooling turns the last map
+  into 64 numbers at any resolution, so the dense layer stays 64→2. The
+  network has 47,602 parameters whatever the image size.
+- **One engine, driven by a layer table.** A single `conv_engine` is reused
+  for all five convolutions. `layer_seq` walks a ROM of 128-bit descriptors,
+  one per layer. Each holds the operation, kernel, stride and padding (4 bits
+  each); input and output channels, heights and widths (12 bits each); the
+  shift (6 bits); and the weight and bias base addresses (20 and 10 bits). 124
+  of the 128 bits are used, and the field layout is identical at 28×28 and
+  224×224 (Derived, `layer_table.json` of both stages).
+- **A/B ping-pong buffers.** Two `fmap_ram`s; each layer reads one and writes
+  the other.
+- **Padding as gated reads.** An out-of-image tap contributes zero. No padded
+  frame is stored.
+- **A 22-bit accumulator sized from the real weights** (Section 5), safe for
+  any 8-bit input image.
+- **Shift and clamp as ReLU.** One right shift per layer, then a clamp to
+  0..255.
+- **GAP divides by 64, as a shift.** The 49 values of each 7×7 map are summed
+  and shifted right by 6. Training uses the same arithmetic.
+- **A run-time threshold register.** T can change without retraining or
+  rebuilding.
+
+**What 28→224 needed.** New `.mem` files (weights, biases, layer table) and
+one RTL change: `fmap_ram` grew from 64 KB to 128 KB, because conv1's output
+at 224×224 is 8×112×112 = 100,352 bytes (bug 9 in Section 7). Nothing else
+in the Verilog changed.
+
+**What it cost.**
+- **Work.** 227,360 MACs per image at 28×28 become 12,192,896 at 224×224,
+  ×53.6 (Derived, both layer tables). The pixel count grows ×64. The ratio is
+  lower because the small maps at 28×28 round up (7→4→2→1).
+- **Memory.** Synthesising `top_v1` alone, block RAM went from 48 RAMB36
+  plus 1 RAMB18 (48.5 tiles; V1.1 with the old 64 KB RAMs) to 80.5 tiles
+  (Synthesis estimate). The full V1.2.1 design uses 82 (Measured).
+- **Clock.** The convolution's address arithmetic, c·in_h·in_w + y·in_w + x
+  as a DSP multiply-add into the block-RAM address, is the critical path. It
+  sets the 66.67 MHz clock (Section 8).
+
+**The AXI wrapper.** `top_v1_axi` puts the unchanged core on the chip's
+buses. It takes a 32-bit AXI-Stream carrying 4 pixels per beat, provides the
+AXI-Lite registers of Section 6.3, and counts the core's clock cycles
+(CYCLES).
+
 ---
 
 ## 7. Verification method
@@ -411,7 +489,7 @@ flowchart LR
     G -.->|"independent audit:<br/>244 vectors + 60 traces,<br/>0 mismatches"| G
 ```
 
-*Figure 4. The proof chain. Each arrow is a bit-exact comparison of
+*Figure 5. The proof chain. Each arrow is a bit-exact comparison of
 integers, not a tolerance.*
 
 1. **Trained network = golden model.** Training is done in integer units,
@@ -481,13 +559,8 @@ message.
 Timing and utilisation are Measured (post-route reports in
 `docs/reports/impl/`). Power is a Synthesis estimate: vector-less, with
 confidence Medium for the first two builds and Low for the LED build.
-Percentages are Derived against the device totals.
-
-![Post-route utilisation](docs/figures/fig_utilisation.png)
-
-*Figure 5. Post-route utilisation of the two V1.2.1 builds (Measured). Block
-RAM, mostly the two 128 KB feature-map buffers, is the only substantial
-resource.*
+Percentages are Derived against the device totals. Block RAM, mostly the two
+128 KB feature-map buffers, is the only substantial resource.
 
 Of `flash_hp64`'s 3,864 LUTs, the accelerator uses 2,758; the DMA uses 528,
 the GP0 interconnect 518, and the HP0 protocol converter 44. The LED GPIO
@@ -515,13 +588,6 @@ Pipelining the address path is the first V2 hardware item.
 
 ### 9.1 Bit-exactness
 
-![The AFI fault and the three runs](docs/figures/fig_afi_runs.png)
-
-*Figure 6. Left: the failing run of 2026-10-08. The board's margins against
-the expected ones correlate at r = 0.98 for the logits, and 234 of 244
-decisions agree, yet no image is bit-exact (Measured). Right: the runs of
-2026-10-09 (Measured).*
-
 | Run (2026-10-09) | Bitstream | AFI RDCHAN_CTRL bit 0 | Bit-exact (logit0 / logit1 / margin / decision) | TP / FN / TN / FP |
 |---|---|---|---|---|
 | 1 | `flash_hp64` | 0, as booted | **244/244** (244 / 244 / 244 / 244) | 117 / 5 / 57 / 65 |
@@ -537,28 +603,49 @@ set. Runs 1 and 3 wrote byte-identical CSV files. Run 2 equals the
 
 ![Gallery from the board](docs/figures/fig_demo_gallery_board.png)
 
-*Figure 7. Board output from the live demo (Measured): the first six true
+*Figure 6. Board output from the live demo (Measured): the first six true
 positives and first six true negatives by index, each classified live by the
 FPGA (all 12 bit-exact) and by the ARM golden model.*
 
-### 9.2 Latency and throughput
+### 9.2 Accelerator metrics
 
-![Latency per image](docs/figures/fig_latency.png)
-
-*Figure 8. Time per 224×224 image (Measured; ARM range over three runs).*
+The usual accelerator figures of merit, for `flash_hp64` at 66.67 MHz. The
+derived values are in `derived_numbers.json` (`accel`, `latency`).
 
 | Metric | Value | Label |
 |---|---|---|
-| Compute (CYCLES = 12,196,126 at 66.666667 MHz) | **182.94 ms**, 5.47 images/s | Measured cycles; Derived ms |
-| End to end, 244 back-to-back `run()` calls, images in memory | **184.73 ms**, 5.41 images/s | Measured |
-| Host overhead (copy, cache flush, registers, DMA, polling) | 1.79 ms (0.97%) | Derived |
-| Repeatability across runs 1–3 | 184.73 / 184.71 / 184.70 ms | Measured |
-| Sweep wall time including `.mem` text parsing | 153.8 s (630 ms/image) | Measured |
-| The brief's 163 ms | 162.62 ms at 75 MHz with the measured cycle count | Derived |
+| Latency, compute (CYCLES = 12,196,126 at 66.666667 MHz) | **182.94 ms** | Measured cycles; Derived ms |
+| Latency, end to end (244 back-to-back `run()` calls, images in memory) | **184.73 ms** | Measured |
+| Throughput | 5.47 images/s compute; 5.41 images/s end to end | Derived |
+| Work per image | 12,192,896 MACs = 24.39 MOP (2 operations per MAC) | Derived |
+| Achieved compute rate | 0.13330 GOP/s (0.13201 end to end) | Derived |
+| Peak at 1 MAC per clock | 0.13333 GOP/s; MAC-cycle efficiency 12,192,896 / 12,196,126 = **99.97%** | Derived |
+| Resources, whole design | 14 DSP (6.4%), 82 BRAM tiles (58.6%), 3,864 LUT (7.3%) | Measured |
+| Resources, accelerator alone (`top_v1_axi_0`) | 14 DSP, 80.5 BRAM tiles, 2,758 LUT | Measured |
+| Power | 1.494 W chip; 0.238 W PL (chip minus PS7: 0.094 W PL dynamic + 0.144 W device static) | Synthesis estimate |
+| Energy per inference (power × compute latency) | 273.3 mJ chip; 43.5 mJ PL | Derived from the Synthesis estimate |
+| Energy efficiency | 0.089 GOP/s/W chip; 0.56 GOP/s/W PL | Derived from the Synthesis estimate |
+
+The same integer model, side by side:
+
+| Platform | Time per image | Label |
+|---|---|---|
+| Desktop PC (Intel Core i7-13650HX), NumPy int64 golden model | 8.7 ms (median of 21) | Measured |
+| PYNQ-Z2 ARM Cortex-A9, same code | 665–744 ms (3 sessions); 706.6 ms mean over the 12 demo images | Measured |
+| PYNQ-Z2 FPGA, compute | 182.94 ms | Measured |
+| PYNQ-Z2 FPGA, end to end | 184.73 ms | Measured |
+
+Host overhead (copy, cache flush, registers, DMA, polling) is 1.79 ms, 0.97%
+of the end-to-end time (Derived). Runs 1–3 took 184.73, 184.71 and 184.70 ms
+(Measured). The sweep's wall time, 153.8 s, is mostly the notebook parsing
+`.mem` text files. The brief's 163 ms is what the measured cycle count gives
+at 75 MHz: 162.62 ms (Derived).
 
 CYCLES exceeds the network's MAC count by 3,230. Of those, 3,136 are the GAP
 stream (64 channels × 49 values, one per clock), and about 94 are sequencing
-and pipeline drain (Derived). The engine does one MAC per clock by design.
+and pipeline drain (Derived). The engine does one MAC per clock by design, so
+it runs at its own peak: V1 is efficient against its design point, and that
+point is low.
 
 ### 9.3 ARM baseline, honestly
 
@@ -568,20 +655,14 @@ at a mean of 706.6 ms against the FPGA's 185.0 ms, a speedup of 3.8×
 (Measured). Every ARM result equalled the expected integers. Across sessions
 the FPGA's compute is **3.6–4.1× faster** (Derived).
 
-This baseline is weak, and the report says so. It is unoptimised NumPy int64
-on one Cortex-A9 core. A NEON int8 implementation, or both cores, would be
-faster. On the development PC (Intel Core i7-13650HX) the same code takes
-**8.7 ms** (Measured; `docs/figures/pc_golden_timing.json`). V1's engine does
-one MAC per clock on purpose. V1 shows that the integer network runs exactly
-in hardware; it does not show that the FPGA is fast. A Raspberry Pi
-comparison is Not yet done.
+This baseline is weak, and the report says so: unoptimised NumPy int64 on
+one Cortex-A9 core, where NEON int8 code or both cores would be faster. The
+development PC runs the same code in **8.7 ms** (Measured;
+`docs/figures/pc_golden_timing.json`). V1 shows that the integer network runs
+exactly in hardware, not that the FPGA is fast. A Raspberry Pi comparison is
+Not yet done.
 
 ### 9.4 Classification on the 244
-
-![Board margins](docs/figures/fig_margins.png)
-
-*Figure 9. Board margins on the 244 images, by ground truth (Measured). The
-vertical line is T = −646.*
 
 | | Predicted pneumonia | Predicted no pneumonia |
 |---|---|---|
@@ -596,10 +677,12 @@ vertical line is T = −646.*
 | AUROC from board margins | 0.837 (bootstrap 0.785–0.884; 2,000 resamples, seed 0) | Derived |
 | **Test-set AUROC, 4,003 patients (headline)** | **0.8229 (0.8083–0.8379)** | Measured (manifest) |
 
-![ROC on the 244](docs/figures/fig_roc.png)
+![Board margins by RSNA class](docs/figures/fig_margins_by_class.png)
 
-*Figure 10. ROC curve from the board margins on the 244 images, with the
-operating point at T = −646 (Derived).*
+*Figure 7. Board margins on the 244 images by RSNA's three-way class
+(Measured: margins from board run 1, classes from `manifest.json`). Dots are
+images, boxes show the quartiles and median, and the dashed line is
+T = −646. The Lung Opacity row is the 122 pneumonia cases.*
 
 What the board shows about the model:
 
@@ -609,23 +692,44 @@ What the board shows about the model:
   −670, all within 90 of T.
 - **The false positives spread up to +1,928.** The median negative margin is
   −595.5, so 65 of the 122 negatives lie above T.
-- **The "Not Normal" label explains much of it.** RSNA's negative class mixes
-  "Normal" with "No Lung Opacity / Not Normal". The manifest records this
-  three-way class for every verification image. 50 of the 76 "Not Normal"
-  negatives are flagged (65.8%), against 15 of the 46 "Normal" ones (32.6%)
-  (Derived). On the full test set, pneumonia vs Normal scores AUROC 0.9363
-  and pneumonia vs Not Normal 0.7382.
+- **The "Not Normal" label explains much of it (Figure 7).** RSNA's negative
+  class mixes "Normal" with "No Lung Opacity / Not Normal". The manifest
+  records this three-way class for every verification image. 50 of the 76
+  "Not Normal" negatives are flagged (65.8%), against 15 of the 46 "Normal"
+  ones (32.6%) (Derived). Their median margins sit either side of T. On the
+  full test set, pneumonia vs Normal scores AUROC 0.9363 and pneumonia vs Not
+  Normal 0.7382 (Figure 2).
 - **The 244 AUROC (0.837) is consistent with the test-set figure.** No
   overfitting is visible here. The repository's notebook has no saved
   training curves, so nothing more is claimed.
 
-The threshold trade-off below is computed on these test images. It is
-illustrative only and must not be used to pick T (Derived):
+![Sensitivity and specificity vs threshold](docs/figures/fig_operating_characteristic.png)
 
-| T | −646 | −400 | −200 | 0 | +200 |
-|---|---|---|---|---|---|
-| Sensitivity | 0.959 | 0.885 | 0.852 | 0.779 | 0.713 |
-| Specificity | 0.467 | 0.566 | 0.656 | 0.738 | 0.787 |
+*Figure 8. Sensitivity and specificity against the threshold, computed from
+the 244 board margins (Derived). Filled dots mark T = −646 on these images
+(0.959 / 0.467). Hollow diamonds mark the same T on the 4,003 test patients
+(0.910 / 0.539; Measured, manifest). Illustrative only: T was fixed on
+validation data, and these test images must not be used to move it.*
+
+Moving T trades one error for the other. On the 244, T = 0 would give
+sensitivity 0.779 and specificity 0.738 (Derived), but choosing T from test
+data would make every number in this report optimistic.
+
+![PPV and NPV vs prevalence](docs/figures/fig_ppv_npv_prevalence.png)
+
+*Figure 9. What a flag means in deployment (Derived). PPV and NPV at the
+test operating point (821 / 902 pneumonia cases flagged, 1,671 / 3,101
+negatives cleared; `docs/audits/V1_audit_v1_2.md`), as disease prevalence
+varies.*
+
+PPV and NPV depend on how common pneumonia is where the device is used, so
+the 244's own PPV (0.643) must not be quoted for deployment. The 244 are
+balanced 50/50 by construction.
+- **At the test set's 22.5% prevalence:** PPV 36.5%, NPV 95.4%.
+- **At 5% prevalence:** PPV 9.4%, so about one flag in eleven is pneumonia,
+  while NPV rises to 99.1%.
+
+A FLASH "clear" is informative; a FLASH "flag" means "read this one first".
 
 ---
 
@@ -660,11 +764,14 @@ reversals, beat permutations and padding variants.
 (Derived; `derived_numbers.json`). A 32-bit word pair never crosses a
 224-pixel row, which is why the row-constant probes were immune.
 
-![What the PL received](docs/figures/fig_dup_even.png)
+![The AFI case study](docs/figures/fig_afi_case.png)
 
-*Figure 11. A crop of image 0 as sent and as the PL received it (Derived from
-the model). The corruption works like a mild horizontal blur, which the GAP
-network largely tolerates. That is why the decisions looked right.*
+*Figure 10. Left: the failing run of 2026-10-08 against the expected margins
+(Measured). The logits correlate at r = 0.98 and 234 of 244 decisions agree,
+yet no image is bit-exact. Right: a crop of image 0 as sent and as the PL
+received it (Derived from the dup_even model). The corruption works like a
+mild horizontal blur, which the GAP network largely tolerates. That is why
+the decisions looked right.*
 
 **Predicting before checking.** The model and the golden model disagree on
 only some probes. For the second probe set, the model's predictions were
@@ -720,7 +827,7 @@ The executed copy is `docs/board_runs/2026-10-09/demo_flash_hp64_led_executed.ip
   blue (0.5 s each), then off.
 - **Gallery.** The first six true positives and first six true negatives by
   index, chosen by a fixed rule stated in the notebook, not by hand. Each is
-  run live on the FPGA and on the ARM golden model (Figure 7): 12/12
+  run live on the FPGA and on the ARM golden model (Figure 6): 12/12
   bit-exact, mean 185.0 ms vs 706.6 ms (Measured).
 - **Live sweep.** All 244 images with a running counter: 244/244 bit-exact,
   sensitivity 0.959, specificity 0.467, AUROC 0.8367 from the board's margins
@@ -734,13 +841,13 @@ The executed copy is `docs/board_runs/2026-10-09/demo_flash_hp64_led_executed.ip
 
 ![First false positive and false negative](docs/figures/fig_demo_errors_board.png)
 
-*Figure 12. The demo's limitations cell (Measured): image 1, a negative with
+*Figure 11. The demo's limitations cell (Measured): image 1, a negative with
 margin +532, is flagged; image 61, a pneumonia case with margin −736, is
 missed.*
 
 ---
 
-## 12. Limitations and what is not done
+## 12. Limitations
 
 - **Not a medical device.** An AUROC of 0.82 on a research dataset is
   research grade. Clinical use would need prospective validation, comparison
@@ -755,17 +862,28 @@ missed.*
 
 | Not yet done | Why it matters |
 |---|---|
-| Board run on all 4,003 test images | The published accuracy would then literally be the board's output. Today it is the golden model's output, which the board reproduces on 244 of 244. |
-| Measured power (USB meter idle and running; SAIF-based estimate) | Low power is a stated motivation; only vector-less estimates exist. |
 | Raspberry Pi–class comparison and an optimised ARM baseline | To state fairly what the FPGA adds. |
-| DICOM → preprocessing → board, end to end on the board | The pixels are proven identical in software; the board has not run that path. |
 | External and paediatric data | Pneumonia deaths are concentrated in children; RSNA is adults from one source. |
 | 75 MHz or faster | Needs the conv address path pipelined (V2). |
 | Manifest hashes for all exported files | The audit found 3 of 313 `.mem` files hashed per stage. |
 
+The full 4,003-image board run, measured power and DICOM on the board are
+V2 future work (Section 13).
+
 ---
 
-## 13. V2 roadmap (future work, in priority order)
+## 13. V2 future work
+
+The project pauses after V1, and everything below is future work. Three
+items would turn V1's software-side evidence into board-side evidence:
+
+| V2 item | Why it is needed |
+|---|---|
+| Board run on all 4,003 test images | The 4,003-image accuracy is the golden model's. It is bit-exact to the board on 244 images, and a full board run would make it literally the board's output. |
+| Measured board power | Power so far is only a Vivado estimate. |
+| DICOM end to end on the board | DICOM preprocessing has only been verified on the PC. |
+
+The full list, in priority order:
 
 1. **A clinical operating point and better specificity.** This is the
    largest weakness, and the board data says where it comes from.
@@ -786,23 +904,31 @@ missed.*
      feature-map reads, because the engine currently reads one byte per
      clock. `line_buffer_v1` is built and tested for this.
    - **Why:** latency falls roughly in proportion; this is the step that
-     makes the FPGA genuinely fast.
+     makes the FPGA genuinely fast. Figure 12 projects it from the measured
+     cycle count. At 16 MACs per clock the compute time would be 11.5 ms at
+     66.67 MHz and 10.2 ms at 75 MHz (Derived projection). That is still not
+     faster than the desktop PC's 8.7 ms, so V2's case for the FPGA must rest
+     on power, determinism and cost rather than speed alone.
+
+   ![V2 projection](docs/figures/fig_v2_projection.png)
+
+   *Figure 12. Derived projection: compute latency against MACs per clock,
+   from the measured 12,196,126 cycles. Assumptions: the MAC cycles scale
+   ideally, the 3,230 non-MAC cycles stay fixed, and memory bandwidth keeps
+   up (k MACs per clock need k activation bytes per clock). 75 MHz assumes
+   the address path is pipelined. Host overhead (about 1.8 ms) is not
+   included.*
 3. **Pipeline the convolution address path, for ≥75 MHz.**
    - **Evidence:** this path is the post-route critical path; at 75 MHz the
      measured cycle count would give 162.62 ms (Derived).
    - **Why:** a cheap, local change with a direct speed gain.
-4. **Measured power.**
-   - **Work:** an inline USB meter, idle and running, plus a SAIF-based
-     estimate from post-implementation simulation.
-   - **Why:** low power is half of the case for an FPGA, and today it rests
-     on a vector-less estimate dominated by the PS.
-5. **A board run on all 4,003 test images.**
-   - **Work:** export the 4,003 test images and run them through the
-     existing notebook. That is about 12 minutes of compute at 182.94 ms
-     each (Derived), plus file transfer.
-   - **Why:** the published accuracy would then be literally the board's
-     output.
-6. **DICOM end to end on the board.**
+4. **Measured board power** (table above). **Work:** an inline USB meter,
+   idle and running, plus a SAIF-based estimate from post-implementation
+   simulation. Low power is half of the case for an FPGA.
+5. **A board run on all 4,003 test images** (table above). **Work:** export
+   the test images and run them through the existing notebook: about 12
+   minutes of compute at 182.94 ms each (Derived), plus file transfer.
+6. **DICOM end to end on the board** (table above).
    - **Feasibility:** the manifest records the RSNA patient ID of every
      verification image, so matching DICOM files can be fetched.
      `flash_preprocess.py` needs pydicom and OpenCV, and whether PYNQ 3.1.1
@@ -827,7 +953,8 @@ with torch 2.11.0+cu128, NumPy 2.1.3, pydicom 3.0.2 and OpenCV 5.0.0
 | Notebooks | `python v1/board/make_notebook.py v1/board/flash_v1_2_board.ipynb 66.666672 top_v1_axi_0 axi_dma_0`; `python v1/board/make_demo_notebook.py v1/board/flash_v1_2_demo.ipynb` |
 | Board bundle | `powershell -ExecutionPolicy Bypass -File v1\board\make_board_bundle.ps1` (263 files) |
 | Board run | `v1/board/README.md`, sections 5–6 |
-| Report figures and derived numbers | `python tools/time_golden_pc.py` then `python tools/make_report_figures.py` |
+| Report figures and derived numbers | `python tools/time_golden_pc.py` then `python tools/make_report_figures.py` (also writes the paper's PDF figures to `paper/figures/`) |
+| Paper | in `paper/`: `pdflatex flash_v1`, `bibtex flash_v1`, then `pdflatex flash_v1` twice |
 
 **Artefacts (SHA-256 prefixes).**
 
