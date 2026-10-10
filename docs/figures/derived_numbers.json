@@ -703,6 +703,11 @@
    "No Lung Opacity / Not Normal": 26,
    "Lung Opacity": 0
   },
+  "class3_median_margin": {
+   "Normal": -1061.0,
+   "No Lung Opacity / Not Normal": -284.5,
+   "Lung Opacity": 792.5
+  },
   "class3_fp_rate": {
    "Normal": 0.326,
    "No Lung Opacity / Not Normal": 0.658
@@ -961,7 +966,9 @@
     "ps7_w": 1.256,
     "bram_w": 0.06,
     "junction_c": 42.2,
-    "confidence": "Medium"
+    "confidence": "Medium",
+    "pl_w": 0.238,
+    "pl_dynamic_w": 0.094
    },
    "pct": {
     "lut": 7.26,
@@ -1059,5 +1066,247 @@
   "ff": 2845,
   "bram_tiles": 80.5,
   "dsp": 14
+ },
+ "accel": {
+  "ops_per_image": 24385792,
+  "gops_compute": 0.1333,
+  "gops_end_to_end": 0.13201,
+  "gops_peak_1mac": 0.13333,
+  "mac_cycle_efficiency": 0.99974,
+  "dsp": 14,
+  "bram_tiles": 82.0,
+  "lut": 3864,
+  "accel_only": {
+   "lut": 2758,
+   "ff": 3206,
+   "ramb36": 80,
+   "ramb18": 1,
+   "dsp": 14
+  },
+  "energy_mj_total": 273.3,
+  "energy_mj_pl": 43.5,
+  "gops_per_w_total": 0.0892,
+  "gops_per_w_pl": 0.56,
+  "power_label": "Derived from the Vivado vector-less estimate (Synthesis estimate), compute latency",
+  "pc_ms": 8.7,
+  "arm_ms_range": [
+   665.1,
+   743.9
+  ],
+  "arm_demo_mean_ms": 706.6,
+  "fpga_demo_mean_ms": 185.0
+ },
+ "subgroups": {
+  "rows": [
+   {
+    "subgroup": "all test",
+    "n": 4003,
+    "positives": 902,
+    "auroc": 0.8229,
+    "ci_hanley_mcneil": [
+     0.8054,
+     0.8404
+    ]
+   },
+   {
+    "subgroup": "Opacity vs Normal",
+    "n": 2229,
+    "positives": 902,
+    "auroc": 0.9363,
+    "ci_hanley_mcneil": [
+     0.9248,
+     0.9478
+    ]
+   },
+   {
+    "subgroup": "Opacity vs No Lung Opacity / Not Normal",
+    "n": 2676,
+    "positives": 902,
+    "auroc": 0.7382,
+    "ci_hanley_mcneil": [
+     0.7173,
+     0.7591
+    ]
+   },
+   {
+    "subgroup": "view AP",
+    "n": 1853,
+    "positives": 706,
+    "auroc": 0.7429,
+    "ci_hanley_mcneil": [
+     0.7189,
+     0.7669
+    ]
+   },
+   {
+    "subgroup": "view PA",
+    "n": 2150,
+    "positives": 196,
+    "auroc": 0.7661,
+    "ci_hanley_mcneil": [
+     0.7262,
+     0.806
+    ]
+   },
+   {
+    "subgroup": "sex M",
+    "n": 2335,
+    "positives": 526,
+    "auroc": 0.821,
+    "ci_hanley_mcneil": [
+     0.7979,
+     0.8441
+    ]
+   },
+   {
+    "subgroup": "sex F",
+    "n": 1668,
+    "positives": 376,
+    "auroc": 0.8262,
+    "ci_hanley_mcneil": [
+     0.7992,
+     0.8532
+    ]
+   }
+  ],
+  "test_auroc_bootstrap": [
+   0.8229,
+   0.8083,
+   0.8379
+  ],
+  "view_only_auroc": 0.7064,
+  "view_only_ci_hanley_mcneil": [
+   0.6858,
+   0.727
+  ],
+  "note": "Measured AUROC from manifest.json; CI is the manifest bootstrap for all test, otherwise Derived with Hanley & McNeil (1982), which is slightly wider than the bootstrap overall"
+ },
+ "prevalence": {
+  "test_counts": {
+   "tp": 821,
+   "fn": 81,
+   "tn": 1671,
+   "fp": 1430
+  },
+  "sens": 0.9102,
+  "spec": 0.5389,
+  "test_prevalence": 0.2253,
+  "ppv_npv": {
+   "0.01": [
+    0.0195,
+    0.9983
+   ],
+   "0.05": [
+    0.0941,
+    0.9913
+   ],
+   "0.1": [
+    0.1799,
+    0.9818
+   ],
+   "0.2253": [
+    0.3647,
+    0.9538
+   ],
+   "0.5": [
+    0.6637,
+    0.8572
+   ]
+  }
+ },
+ "projection": {
+  "assumption": "cycles(k) = total MACs / k + the measured non-MAC cycles (GAP stream, sequencing); ideal scaling, memory bandwidth permitting; compute only",
+  "non_mac_cycles": 3230,
+  "ms": {
+   "66.67MHz": {
+    "1": 182.94,
+    "2": 91.5,
+    "4": 45.77,
+    "8": 22.91,
+    "16": 11.48
+   },
+   "75MHz": {
+    "1": 162.62,
+    "2": 81.33,
+    "4": 40.69,
+    "8": 20.36,
+    "16": 10.2
+   }
+  }
+ },
+ "scaling": {
+  "macs_v1_1": 227360,
+  "macs_v1_2": 12192896,
+  "macs_ratio": 53.63,
+  "pixel_ratio": 64,
+  "descriptor_bits": 128,
+  "descriptor_fields": [
+   [
+    "op",
+    4
+   ],
+   [
+    "kernel",
+    4
+   ],
+   [
+    "stride",
+    4
+   ],
+   [
+    "pad",
+    4
+   ],
+   [
+    "in_c",
+    12
+   ],
+   [
+    "out_c",
+    12
+   ],
+   [
+    "in_h",
+    12
+   ],
+   [
+    "in_w",
+    12
+   ],
+   [
+    "out_h",
+    12
+   ],
+   [
+    "out_w",
+    12
+   ],
+   [
+    "shift",
+    6
+   ],
+   [
+    "w_base",
+    20
+   ],
+   [
+    "b_base",
+    10
+   ]
+  ],
+  "descriptor_used_bits": 124,
+  "conv1_output_bytes_224": 100352,
+  "bram36_v1_1_synth": 48,
+  "bram18_v1_1_synth": 1,
+  "bram_tiles_v1_2_synth": 80.5,
+  "same_fields_both_stages": true,
+  "v0_params": {
+   "conv": 40,
+   "fc1": 12560,
+   "fc2": 34,
+   "total": 12634,
+   "flatten_fc_share": 0.9968,
+   "fc1_weights_if_224": 802816
+  }
  }
 }

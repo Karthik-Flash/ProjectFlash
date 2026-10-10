@@ -185,6 +185,8 @@ D['cls'] = dict(
                      for t in (-646, -400, -200, 0, 200)},
     class3_counts=by_class(np.ones(244, bool)),
     class3_fp=by_class((d == 1) & neg), class3_tn=by_class((d == 0) & neg),
+    class3_median_margin={c: float(np.median(m[cls3 == c]))
+                          for c in ('Normal', 'No Lung Opacity / Not Normal', 'Lung Opacity')},
     class3_fp_rate={c: round(by_class((d == 1) & neg)[c] / max(by_class(neg)[c], 1), 3)
                     for c in ('Normal', 'No Lung Opacity / Not Normal')},
     auroc_pneumonia_vs_normal_244=round(auroc(gt[cls3 != 'No Lung Opacity / Not Normal'],
@@ -301,168 +303,291 @@ D['synth_v1_2'] = dict(wns=float(nums.group(1)), endpoints=int(nums.group(4)), w
                        ff=int(re.search(r'\| Slice Registers\s*\|\s*(\d+)', su).group(1)),
                        bram_tiles=float(re.search(r'\| Block RAM Tile\s*\|\s*([\d.]+)', su).group(1)),
                        dsp=int(re.search(r'\| DSPs\s*\|\s*(\d+)', su).group(1)))
+p = D['impl']['v1_2_hp64']['power']
+D['impl']['v1_2_hp64']['power']['pl_w'] = round(p['total_w'] - p['ps7_w'], 3)            # PL dynamic + device static
+D['impl']['v1_2_hp64']['power']['pl_dynamic_w'] = round(p['dynamic_w'] - p['ps7_w'], 3)
+
+# ---------------------------------------------------------------- accelerator metrics (industry terms)
+lat = D['latency']
+ops = 2 * lat['total_macs']                                  # 1 MAC = 1 multiply + 1 add
+t_c, t_e = lat['cycles'] / (fclk * 1e6), lat['end_to_end_ms'] / 1e3
+u64 = D['impl']['v1_2_hp64']
+D['accel'] = dict(
+    ops_per_image=ops,
+    gops_compute=round(ops / t_c / 1e9, 5), gops_end_to_end=round(ops / t_e / 1e9, 5),
+    gops_peak_1mac=round(2 * fclk * 1e6 / 1e9, 5),
+    mac_cycle_efficiency=round(lat['total_macs'] / lat['cycles'], 5),
+    dsp=u64['util']['flash_bd_wrapper']['dsp'], bram_tiles=u64['bram_tiles'], lut=u64['util']['flash_bd_wrapper']['lut'],
+    accel_only=u64['util']['top_v1_axi_0'],
+    energy_mj_total=round(p['total_w'] * t_c * 1e3, 1), energy_mj_pl=round(D['impl']['v1_2_hp64']['power']['pl_w'] * t_c * 1e3, 1),
+    gops_per_w_total=round(ops / t_c / 1e9 / p['total_w'], 4),
+    gops_per_w_pl=round(ops / t_c / 1e9 / D['impl']['v1_2_hp64']['power']['pl_w'], 3),
+    power_label='Derived from the Vivado vector-less estimate (Synthesis estimate), compute latency',
+    pc_ms=lat.get('pc_golden', {}).get('ms_per_image'), arm_ms_range=[min(arm), max(arm)],
+    arm_demo_mean_ms=D['demo']['mean_arm_ms'], fpga_demo_mean_ms=D['demo']['mean_fpga_ms'])
+
+# ---------------------------------------------------------------- test-set subgroups (manifest), CIs
+def hanley_mcneil(a, npos, nneg, z=1.96):
+    q1, q2 = a / (2 - a), 2 * a * a / (1 + a)
+    se = math.sqrt((a * (1 - a) + (npos - 1) * (q1 - a * a) + (nneg - 1) * (q2 - a * a)) / (npos * nneg))
+    return [round(a - z * se, 4), round(a + z * se, 4)]
+
+summ_m = manifest['summary']
+boot_test = [float(v) for v in re.findall(r'[\d.]+', summ_m['TEST AUROC'])]
+n_pos_test = next(s['positives'] for s in manifest['subgroups'] if s['subgroup'] == 'all test')
+sg = []
+for s in manifest['subgroups']:
+    a, npos, nneg = float(s['AUROC']), s['positives'], s['n'] - s['positives']
+    sg.append(dict(subgroup=s['subgroup'], n=s['n'], positives=npos, auroc=a, ci_hanley_mcneil=hanley_mcneil(a, npos, nneg)))
+view_only = float(summ_m['view-only AUROC (shortcut floor)'])
+D['subgroups'] = dict(
+    rows=sg, test_auroc_bootstrap=boot_test, view_only_auroc=view_only,
+    view_only_ci_hanley_mcneil=hanley_mcneil(view_only, n_pos_test, n_test - n_pos_test),
+    note='Measured AUROC from manifest.json; CI is the manifest bootstrap for all test, '
+         'otherwise Derived with Hanley & McNeil (1982), which is slightly wider than the bootstrap overall')
+
+# ---------------------------------------------------------------- PPV / NPV vs prevalence (test operating point)
+aud = (R / 'docs/audits/V1_audit_v1_2.md').read_text(encoding='utf-8')
+tn_, fp_, tp_, fn_ = map(int, re.search(r'TN (\d+), FP (\d+), TP (\d+), FN (\d+)', aud).groups())
+sens_t, spec_t = tp_ / (tp_ + fn_), tn_ / (tn_ + fp_)
+def ppv_npv(prev):
+    ppv = sens_t * prev / (sens_t * prev + (1 - spec_t) * (1 - prev))
+    npv = spec_t * (1 - prev) / (spec_t * (1 - prev) + (1 - sens_t) * prev)
+    return round(ppv, 4), round(npv, 4)
+prev_test = (tp_ + fn_) / (tp_ + fn_ + tn_ + fp_)
+D['prevalence'] = dict(test_counts=dict(tp=tp_, fn=fn_, tn=tn_, fp=fp_), sens=round(sens_t, 4), spec=round(spec_t, 4),
+                       test_prevalence=round(prev_test, 4),
+                       ppv_npv={f'{q:g}': ppv_npv(q) for q in (0.01, 0.05, 0.10, round(prev_test, 4), 0.50)})
+
+# ---------------------------------------------------------------- V2 projection (Derived, ideal scaling)
+non_mac = lat['cycles'] - lat['total_macs']
+D['projection'] = dict(
+    assumption='cycles(k) = total MACs / k + the measured non-MAC cycles (GAP stream, sequencing); '
+               'ideal scaling, memory bandwidth permitting; compute only',
+    non_mac_cycles=non_mac,
+    ms={f'{f:g}MHz': {k: round((lat['total_macs'] / k + non_mac) / (f * 1e3), 2) for k in (1, 2, 4, 8, 16)}
+        for f in (fclk, 75.0)})
+D['projection']['ms'] = {('66.67MHz' if k.startswith('66') else k): v for k, v in D['projection']['ms'].items()}
+
+# ---------------------------------------------------------------- 28x28 -> 224x224 (layer tables)
+def table_macs(path):
+    t = json.loads(path.read_text())
+    return t, sum(L['out_c'] * L['out_h'] * L['out_w'] * L['in_c'] * 9 if L['op'] == 'CONV3X3' else
+                  L['out_c'] * L['in_c'] if L['op'] == 'FC' else 0 for L in t['layers'])
+t11, macs11 = table_macs(R / 'v1/mem/v1_1/flash_v1_1/layer_table.json')
+t12, macs12 = table_macs(EXP / 'layer_table.json')
+s11 = (R / 'docs/reports/synth/V1_synth_results_v1_1.md').read_text(encoding='utf-8')
+c1 = t12['layers'][0]
+D['scaling'] = dict(
+    macs_v1_1=macs11, macs_v1_2=macs12, macs_ratio=round(macs12 / macs11, 2), pixel_ratio=(224 // 28) ** 2,
+    descriptor_bits=t12['word_width'], descriptor_fields=t12['fields'],
+    descriptor_used_bits=sum(w for _, w in t12['fields']),
+    conv1_output_bytes_224=c1['out_c'] * c1['out_h'] * c1['out_w'],
+    bram36_v1_1_synth=int(re.search(r'\| BRAM36 \| (\d+) \|', s11).group(1)),
+    bram18_v1_1_synth=int(re.search(r'\| BRAM18 \| (\d+) \|', s11).group(1)),
+    bram_tiles_v1_2_synth=D['synth_v1_2']['bram_tiles'],
+    same_fields_both_stages=t11['fields'] == t12['fields'])
+# v0's parameters, from the layer table in v0_baseline/README.md (conv 4x3x3, FC1 784->16, FC2 16->2)
+v0 = dict(conv=4 * 9 + 4, fc1=784 * 16 + 16, fc2=16 * 2 + 2)
+D['scaling']['v0_params'] = dict(v0, total=sum(v0.values()), flatten_fc_share=round((v0['fc1'] + v0['fc2']) / sum(v0.values()), 4),
+                                 fc1_weights_if_224=4 * 112 * 112 * 16)
 
 (OUT / 'derived_numbers.json').write_text(json.dumps(D, indent=1) + '\n')
 
 # ================================================================ figures
+# Sized for an IEEE column (3.5 in) or page (7.16 in); the same files serve the report (PNG) and the
+# paper (PDF, in paper/figures/). Each figure carries its label: Measured, Derived or Derived projection.
 INK, INK2, MUTED, GRID, BASE, SURF = '#0b0b0b', '#52514e', '#898781', '#e1e0d9', '#c3c2b7', '#fcfcfb'
 BLUE, ORANGE, AQUA = '#2a78d6', '#eb6834', '#1baf7a'
-GOOD, CRIT = '#0ca30c', '#d03b3b'
+W1, W2 = 3.5, 7.16
 plt.rcParams.update({
-    'font.family': ['Segoe UI', 'DejaVu Sans'], 'font.size': 10, 'text.color': INK,
-    'axes.edgecolor': BASE, 'axes.labelcolor': INK2, 'axes.titlesize': 11, 'axes.titleweight': 'bold',
-    'axes.titlelocation': 'left', 'axes.facecolor': SURF, 'figure.facecolor': SURF,
-    'xtick.color': MUTED, 'ytick.color': MUTED, 'axes.grid': True, 'grid.color': GRID, 'grid.linewidth': 0.6,
-    'axes.spines.top': False, 'axes.spines.right': False, 'legend.frameon': False, 'savefig.dpi': 170,
-    'savefig.bbox': 'tight', 'savefig.facecolor': SURF})
+    'font.family': 'DejaVu Sans', 'font.size': 8, 'text.color': INK,
+    'axes.edgecolor': BASE, 'axes.labelcolor': INK2, 'axes.labelsize': 8, 'axes.titlesize': 8.5,
+    'axes.titleweight': 'bold', 'axes.titlelocation': 'left', 'axes.facecolor': SURF, 'figure.facecolor': SURF,
+    'xtick.color': MUTED, 'ytick.color': MUTED, 'xtick.labelsize': 7, 'ytick.labelsize': 7,
+    'axes.grid': True, 'grid.color': GRID, 'grid.linewidth': 0.5, 'axes.spines.top': False,
+    'axes.spines.right': False, 'legend.frameon': False, 'legend.fontsize': 6.8, 'savefig.dpi': 220,
+    'savefig.bbox': 'tight', 'savefig.pad_inches': 0.03, 'savefig.facecolor': SURF, 'pdf.fonttype': 42})
+PAPER = R / 'paper/figures'
+PAPER.mkdir(parents=True, exist_ok=True)
+for name in ('fig_demo_gallery_board.png', 'fig_demo_errors_board.png'):
+    (PAPER / name).write_bytes((OUT / name).read_bytes())
 
-def tag(ax, text):
-    ax.text(1.0, 1.02, text, transform=ax.transAxes, ha='right', va='bottom', fontsize=8.5, color=INK2,
-            bbox=dict(boxstyle='round,pad=0.25', fc='#f0efec', ec='none'))
+def save(fig, name):
+    fig.savefig(OUT / f'{name}.png')
+    fig.savefig(PAPER / f'{name}.pdf', metadata={'CreationDate': None})
+    plt.close(fig)
+
+def head(ax, title, label):
+    ax.set_title(title, pad=15)
+    ax.text(0.0, 1.025, label, transform=ax.transAxes, ha='left', va='bottom', fontsize=6.3, color=INK2,
+            bbox=dict(boxstyle='round,pad=0.2', fc='#f0efec', ec='none'))
 
 # F1: MACs per layer (Derived)
-fig, ax = plt.subplots(figsize=(7.2, 3.0))
+fig, ax = plt.subplots(figsize=(W1, 2.0))
 names = list(macs)
 vals = [macs[n] / 1e6 for n in names]
-ax.bar(names, vals, color=BLUE, width=0.6, zorder=3)
+ax.bar(names, vals, color=BLUE, width=0.62, zorder=3)
 for x, v, n in zip(range(len(names)), vals, names):
-    ax.text(x, v + 0.06, f'{macs[n]:,}', ha='center', va='bottom', fontsize=8.5, color=INK2)
+    ax.text(x, v + 0.07, f'{macs[n]:,}', ha='center', va='bottom', fontsize=5.8, color=INK2)
+ax.set_ylim(0, 4.3)
 ax.set_ylabel('MACs per image (millions)')
-ax.set_title('Multiply-accumulates per layer, 224×224 input')
+head(ax, 'MACs per layer, 224×224', 'Derived (layer_table.json)')
 ax.grid(axis='x', visible=False)
-tag(ax, 'Derived (layer_table.json)')
-fig.savefig(OUT / 'fig_layer_macs.png'); plt.close(fig)
+save(fig, 'fig_layer_macs')
 
-# F2: the corrupted run vs the expected logits (Measured)
-fig, axes = plt.subplots(1, 2, figsize=(9.2, 3.9))
-ax = axes[0]
+# Fa: operating characteristic on the 244 board margins (Derived), test-set point (Measured, manifest)
+fig, ax = plt.subplots(figsize=(W1, 2.35))
+ths = np.arange(int(m.min()) - 100, int(m.max()) + 101)
+sens_c = ((m[None, :] > ths[:, None]) & (gt == 1)).sum(1) / gt.sum()
+spec_c = ((m[None, :] <= ths[:, None]) & (gt == 0)).sum(1) / (gt == 0).sum()
+ax.plot(ths, sens_c, color=BLUE, lw=1.6, zorder=3)
+ax.plot(ths, spec_c, color=ORANGE, lw=1.6, zorder=3)
+ax.axvline(T, color=INK2, lw=0.8, ls='--', zorder=2)
+b_s, b_p = D['cls']['sensitivity_wilson'][0], D['cls']['specificity_wilson'][0]
+ax.scatter([T, T], [b_s, b_p], s=22, color=[BLUE, ORANGE], zorder=5, edgecolor=SURF, lw=1,
+           label=f'board, 244: {b_s:.3f} / {b_p:.3f}')
+ax.scatter([T, T], [sens_t, spec_t], s=26, marker='D', facecolor=SURF, edgecolor=[BLUE, ORANGE], lw=1.3, zorder=5,
+           label=f'test set, 4,003: {sens_t:.3f} / {spec_t:.3f}')
+ax.text(1150, 0.83, 'specificity', color=INK2, fontsize=7)
+ax.text(1150, 0.47, 'sensitivity', color=INK2, fontsize=7)
+ax.text(T + 60, 0.03, 'T = −646', fontsize=6.8, color=INK2)
+ax.set_xlabel('threshold on margin (flag if margin > threshold)')
+ax.set_ylim(-0.02, 1.08)
+head(ax, 'Sensitivity and specificity vs threshold', 'Derived (board margins); illustrative only')
+ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.24), ncol=2, handletextpad=0.2, columnspacing=1.0)
+save(fig, 'fig_operating_characteristic')
+
+# Fb: board margins by RSNA three-way class (Measured)
+fig, ax = plt.subplots(figsize=(W1, 2.15))
+classes = [('Normal', 'Normal', AQUA), ('No Lung Opacity / Not Normal', 'Not Normal', ORANGE),
+           ('Lung Opacity', 'Lung Opacity', BLUE)]
+jr = np.random.default_rng(1)
+for yy, (c, lab, col) in enumerate(classes):
+    mc = m[cls3 == c]
+    ax.scatter(mc, yy + jr.uniform(-0.2, 0.2, len(mc)), s=6, color=col, lw=0, alpha=0.9, zorder=3)
+    ax.boxplot(mc, positions=[yy], vert=False, widths=0.55, showfliers=False, zorder=4, manage_ticks=False,
+               medianprops=dict(color=INK, lw=1.2), boxprops=dict(color=INK, lw=0.8),
+               whiskerprops=dict(color=INK, lw=0.8), capprops=dict(color=INK, lw=0.8))
+    ax.text(1.01, yy, f'{int((mc > T).sum())}/{len(mc)}\nflagged', transform=ax.get_yaxis_transform(),
+            va='center', fontsize=6.5, color=INK, clip_on=False)
+ax.axvline(T, color=INK2, lw=0.9, ls='--', zorder=2)
+ax.text(T - 40, 2.62, 'T', ha='right', fontsize=7, color=INK2)
+ax.set_yticks(range(3)); ax.set_yticklabels([c[1] for c in classes], fontsize=7)
+ax.set_ylim(-0.6, 2.75)
+ax.set_xlabel('board margin = logit1 − logit0')
+head(ax, 'Board margins by RSNA class', 'Measured (board run 1; classes from manifest.json)')
+ax.grid(axis='y', visible=False)
+save(fig, 'fig_margins_by_class')
+
+# Fc: subgroup AUROC, test set (Measured AUROC; CIs bootstrap or Derived Hanley-McNeil)
+nice = {'all test': 'All test patients', 'Opacity vs Normal': 'Pneumonia vs Normal',
+        'Opacity vs No Lung Opacity / Not Normal': 'Pneumonia vs Not Normal', 'view AP': 'AP films',
+        'view PA': 'PA films', 'sex M': 'Male', 'sex F': 'Female'}
+rows = [(f"{nice[s['subgroup']]} ({s['n']:,})", s['auroc'],
+         boot_test[1:] if s['subgroup'] == 'all test' else s['ci_hanley_mcneil'], BLUE) for s in sg]
+rows.append(('Board, 244 verification images', D['cls']['auroc'], D['cls']['auroc_boot_ci'], AQUA))
+fig, ax = plt.subplots(figsize=(W1, 2.55))
+ys = list(range(len(rows) - 1, 0, -1)) + [-0.5]
+for yy, (lab, a, ci, col) in zip(ys, rows):
+    ax.plot(ci, [yy, yy], color=col, lw=1.6, zorder=3, solid_capstyle='round')
+    ax.scatter([a], [yy], s=20, color=col, zorder=4, edgecolor=SURF, lw=0.8)
+    ax.text(1.01, yy, f'{a:.3f} ({ci[0]:.3f}–{ci[1]:.3f})', transform=ax.get_yaxis_transform(), va='center',
+            fontsize=6.3, color=INK, clip_on=False)
+ax.axvline(view_only, color=INK2, lw=0.8, ls='--', zorder=2)
+ax.text(view_only + 0.004, 7.55, f'view (AP/PA) alone {view_only:.3f}', fontsize=6.3, color=INK2)
+ax.set_yticks(ys); ax.set_yticklabels([r[0] for r in rows], fontsize=6.6)
+ax.set_xlim(0.66, 1.0); ax.set_ylim(-1.1, 8.0)
+ax.set_xlabel('AUROC (95% CI)')
+head(ax, 'Subgroup AUROC, 4,003 test patients', 'Measured AUROC (manifest.json); Derived CIs')
+ax.grid(axis='y', visible=False)
+save(fig, 'fig_subgroup_auroc')
+
+# Fd: PPV / NPV vs prevalence at the test operating point (Derived)
+fig, ax = plt.subplots(figsize=(W1, 2.3))
+pv = np.linspace(0.01, 0.50, 197)
+pp = np.array([ppv_npv(q) for q in pv])
+ax.plot(pv * 100, pp[:, 0] * 100, color=BLUE, lw=1.6, zorder=3)
+ax.plot(pv * 100, pp[:, 1] * 100, color=ORANGE, lw=1.6, zorder=3)
+for q, lab in ((prev_test, f'test set\n{prev_test * 100:.1f}%'), (0.5, '244 subset\n50%')):
+    ax.axvline(q * 100, color=INK2, lw=0.7, ls='--', zorder=2)
+    a_, b_ = ppv_npv(q)
+    ax.scatter([q * 100] * 2, [a_ * 100, b_ * 100], s=16, color=[BLUE, ORANGE], zorder=4, edgecolor=SURF, lw=0.8)
+    ax.text(q * 100 - 0.8, a_ * 100 + 3, f'{a_ * 100:.1f}%', ha='right', fontsize=6.5, color=INK)
+    ax.text(q * 100 - 0.8, b_ * 100 - 9, f'{b_ * 100:.1f}%', ha='right', fontsize=6.5, color=INK)
+    ax.text(q * 100 - 0.8, 12, lab, ha='right', va='center', fontsize=6.3, color=INK2)
+a5 = ppv_npv(0.05)[0]
+ax.scatter([5], [a5 * 100], s=16, color=BLUE, zorder=4, edgecolor=SURF, lw=0.8)
+ax.text(6, a5 * 100 - 2, f'{a5 * 100:.1f}% at 5%', fontsize=6.5, color=INK, va='top')
+ax.text(24, 99.5, 'NPV: P(no pneumonia | cleared)', fontsize=6.5, color=INK2, va='bottom')
+ax.text(37, 27, 'PPV: P(pneumonia | flagged)', fontsize=6.5, color=INK2, ha='center')
+ax.set_xlim(0, 52); ax.set_ylim(0, 106)
+ax.set_xlabel('prevalence of pneumonia (%)'); ax.set_ylabel('%')
+head(ax, 'PPV and NPV vs prevalence', f'Derived (test operating point: sens {sens_t:.3f}, spec {spec_t:.3f})')
+save(fig, 'fig_ppv_npv_prevalence')
+
+# Fe: AFI case study: the corrupted run (Measured) next to what the PL received (Derived)
+fig = plt.figure(figsize=(W2, 2.6))
+gs = fig.add_gridspec(3, 2, width_ratios=[1, 1.35], wspace=0.18, hspace=0.75)
+ax = fig.add_subplot(gs[:, 0])
 ok = h32['decision'] == exp['exp_decision']
 lo = min(exp['exp_margin'].min(), h32['margin'].min()) - 150
 hi = max(exp['exp_margin'].max(), h32['margin'].max()) + 150
-ax.plot([lo, hi], [lo, hi], color=MUTED, lw=1, zorder=2)
-ax.scatter(exp['exp_margin'][ok], h32['margin'][ok], s=14, color=BLUE, zorder=3, lw=0, label=f'decision agrees ({ok.sum()})')
-ax.scatter(exp['exp_margin'][~ok], h32['margin'][~ok], s=34, color=ORANGE, zorder=4, lw=0.8, edgecolor=SURF,
+ax.plot([lo, hi], [lo, hi], color=MUTED, lw=0.8, zorder=2)
+ax.scatter(exp['exp_margin'][ok], h32['margin'][ok], s=7, color=BLUE, zorder=3, lw=0,
+           label=f'decision agrees ({ok.sum()})')
+ax.scatter(exp['exp_margin'][~ok], h32['margin'][~ok], s=18, color=ORANGE, zorder=4, lw=0.6, edgecolor=SURF,
            label=f'decision flips ({(~ok).sum()})')
-ax.axhline(T, color=INK2, lw=0.8, ls='--', zorder=2); ax.axvline(T, color=INK2, lw=0.8, ls='--', zorder=2)
+ax.axhline(T, color=INK2, lw=0.6, ls='--', zorder=2); ax.axvline(T, color=INK2, lw=0.6, ls='--', zorder=2)
 ax.set_xlim(lo, hi); ax.set_ylim(lo, hi)
 ax.set_xlabel('expected margin (golden model)'); ax.set_ylabel('board margin, flash_hp32')
-ax.set_title('2026-10-08: plausible but wrong')
-ax.text(0.03, 0.97, f'r = {D["afi"]["corr_all_logits"]:.2f} (logits), {D["afi"]["corr_margin"]:.2f} (margin)\n'
-        f'bit-exact 0/244, decisions agree {D["afi"]["decision_agreement"]}/244',
-        transform=ax.transAxes, va='top', fontsize=8.5, color=INK2)
-ax.text(hi - 60, T + 60, 'T = -646', ha='right', fontsize=8, color=INK2)
-ax.legend(loc='lower right', fontsize=8.5)
-tag(ax, 'Measured (board)')
-ax = axes[1]
-labels = ['run 1\nflash_hp64', 'run 2\nflash_hp32', 'run 3\nflash_hp32\n+ AFI_FORCE', 'demo\nflash_hp64_led']
-vals = [D['runs']['flash_hp64']['bit_exact'], D['runs']['flash_hp32']['bit_exact'],
-        D['runs']['flash_hp32_afiforce']['bit_exact'], D['demo']['sweep_bit_exact']]
-cols = [GOOD if v == 244 else CRIT for v in vals]
-ax.bar(range(4), vals, color=cols, width=0.6, zorder=3)
-for x, v in enumerate(vals):
-    ax.text(x, v + 4, f'{v}/244', ha='center', va='bottom', fontsize=9, color=INK if v else CRIT, weight='bold')
-ax.set_xticks(range(4)); ax.set_xticklabels(labels, fontsize=8.5); ax.set_ylim(0, 270)
-ax.set_ylabel('images bit-exact (logits, margin, decision)')
-ax.set_title('2026-10-09: one bit decides')
-ax.grid(axis='x', visible=False)
-tag(ax, 'Measured (board)')
-fig.tight_layout(); fig.savefig(OUT / 'fig_afi_runs.png'); plt.close(fig)
-
-# F3: what the PL saw (Derived illustration)
+ax.text(0.03, 0.97, f'r = {D["afi"]["corr_all_logits"]:.2f} (logits)\nbit-exact 0/244\n'
+        f'decisions agree {D["afi"]["decision_agreement"]}/244', transform=ax.transAxes, va='top', fontsize=6.8,
+        color=INK)
+ax.legend(loc='lower right')
+head(ax, 'Board vs expected margin, flash_hp32', 'Measured (board, 2026-10-08)')
 im0 = i0.reshape(224, 224).astype(int)
 seen = dup_even(i0).reshape(224, 224).astype(int)
 y0, x0 = 96, 40
-crop = (slice(y0, y0 + 24), slice(x0, x0 + 48))
-fig, axes = plt.subplots(1, 3, figsize=(9.2, 2.0))
-for ax, a, t_ in zip(axes, (im0[crop], seen[crop], np.abs(im0[crop] - seen[crop])),
-                     ('image 0 as sent', 'as received by the PL\n(odd 32-bit words replaced)', '|difference|')):
-    ax.imshow(a, cmap='gray', vmin=0, vmax=255 if t_ != '|difference|' else max(1, int(a.max())), interpolation='nearest')
-    ax.set_title(t_, fontsize=9.5, weight='normal'); ax.set_xticks([]); ax.set_yticks([]); ax.grid(False)
-    for xx in range(0, 49, 8):
-        ax.axvline(xx - 0.5, color=ORANGE, lw=0.6, alpha=0.7)
-axes[0].set_ylabel(f'rows {y0}-{y0 + 23}\ncols {x0}-{x0 + 47}', fontsize=8, color=INK2)
-tag(axes[2], 'Derived (dup_even model)')
-fig.text(0.01, 0.04, 'Orange lines mark 8-pixel (64-bit) boundaries: each group keeps its first 4 pixels and repeats them.',
-         fontsize=8.5, color=INK2)
-fig.savefig(OUT / 'fig_dup_even.png'); plt.close(fig)
+crop = (slice(y0, y0 + 24), slice(x0, x0 + 128))
+panels = (im0[crop], seen[crop], np.abs(im0[crop] - seen[crop]))
+titles = ('image 0 as sent (rows 96–119, columns 40–167)', 'as received: odd 32-bit words replaced by even ones',
+          '|difference|; orange lines mark 8-pixel (64-bit) groups')
+for j, (a, t_) in enumerate(zip(panels, titles)):
+    axc = fig.add_subplot(gs[j, 1])
+    axc.imshow(a, cmap='gray', vmin=0, vmax=255 if j < 2 else max(1, int(a.max())), interpolation='nearest',
+               aspect='equal')
+    axc.set_xlabel(t_, fontsize=6.4, labelpad=2); axc.set_xticks([]); axc.set_yticks([]); axc.grid(False)
+    for xx in range(0, 129, 8):
+        axc.axvline(xx - 0.5, color=ORANGE, lw=0.5, alpha=0.8)
+    if j == 0:
+        head(axc, 'What the PL received', 'Derived (dup_even model)')
+save(fig, 'fig_afi_case')
 
-# F4: latency (Measured, one Derived)
-fig, ax = plt.subplots(figsize=(7.6, 2.9))
-pcms = D['latency'].get('pc_golden', {}).get('ms_per_image')
-rows = [('FPGA, compute only (CYCLES)', D['latency']['compute_ms'], BLUE, None),
-        ('FPGA, end to end (run(), 244 images)', D['latency']['end_to_end_ms'], BLUE, None),
-        ('ARM Cortex-A9, NumPy int64 golden', float(np.mean(arm)), ORANGE, (min(arm), max(arm)))]
-if pcms:
-    rows.append(('Desktop PC, NumPy int64 golden', pcms, AQUA, None))
-for yy, (lab, v, col, rngv) in enumerate(rows):
-    ax.barh(yy, v, color=col, height=0.55, zorder=3)
-    if rngv:
-        ax.plot(rngv, [yy, yy], color=INK, lw=1.4, zorder=4)
-        ax.plot([rngv[0]] * 2, [yy - .12, yy + .12], color=INK, lw=1.4, zorder=4)
-        ax.plot([rngv[1]] * 2, [yy - .12, yy + .12], color=INK, lw=1.4, zorder=4)
-        txt = f'{rngv[0]:.0f}-{rngv[1]:.0f} ms (3 runs)'
-        xpos = rngv[1]
-    else:
-        txt = f'{v:.2f} ms' if v > 50 else f'{v:.1f} ms'
-        xpos = v
-    ax.text(xpos + 12, yy, txt, va='center', fontsize=9, color=INK)
-ax.set_yticks(range(len(rows))); ax.set_yticklabels([r[0] for r in rows], fontsize=9)
-ax.invert_yaxis(); ax.set_xlim(0, 900); ax.set_xlabel('milliseconds per 224×224 image')
-ax.set_title('Latency per image')
-ax.grid(axis='y', visible=False)
-tag(ax, 'Measured')
-fig.savefig(OUT / 'fig_latency.png'); plt.close(fig)
+# Ff: V2 projection, latency vs MACs per clock (Derived projection)
+fig, ax = plt.subplots(figsize=(W1, 2.45))
+ks = [1, 2, 4, 8, 16]
+for f, key, col in ((fclk, '66.67MHz', BLUE), (75.0, '75MHz', ORANGE)):
+    yv = [D['projection']['ms'][key][k] for k in ks]
+    ax.plot(ks, yv, color=col, lw=1.5, marker='o', ms=3.2, zorder=3)
+    ax.text(2.15, yv[1] * (1.3 if col == BLUE else 0.56), f'{key[:-3]} MHz', fontsize=6.5, color=INK2, va='center')
+    ax.text(17.5, yv[-1] * (1.12 if col == BLUE else 0.89), f'{yv[-1]:.1f} ms', va='center', fontsize=6.3, color=INK)
+ax.scatter([1], [lat['compute_ms']], s=46, facecolor='none', edgecolor=INK, lw=1.1, zorder=5)
+ax.text(1.12, lat['compute_ms'] * 1.32, f'measured {lat["compute_ms"]:.2f} ms', fontsize=6.5, color=INK)
+pcm = D['accel']['pc_ms']
+for yv, lab in ((D['demo']['mean_arm_ms'], f'board ARM, NumPy golden ({D["demo"]["mean_arm_ms"]:.0f} ms)'),
+                (pcm, f'desktop PC, NumPy golden ({pcm:.1f} ms)')):
+    ax.axhline(yv, color=MUTED, lw=0.8, ls=':', zorder=2)
+    ax.text(1.0, yv * 1.08, lab, fontsize=6.2, color=INK2)
+ax.set_xscale('log', base=2); ax.set_yscale('log')
+ax.set_xticks(ks); ax.set_xticklabels([str(k) for k in ks])
+ax.set_yticks([10, 30, 100, 300, 1000]); ax.set_yticklabels(['10', '30', '100', '300', '1000'])
+ax.set_xlim(0.85, 16.5); ax.set_ylim(6, 1300)
+ax.set_xlabel('MACs per clock (V1 = 1)'); ax.set_ylabel('compute latency (ms, log)')
+ax.text(0.98, 0.83, 'ideal scaling, memory bandwidth permitting;\n75 MHz needs the address path pipelined',
+        transform=ax.transAxes, ha='right', va='top', fontsize=5.9, color=INK2)
+head(ax, 'V2: latency vs parallel MACs', 'Derived projection from the measured cycle count')
+save(fig, 'fig_v2_projection')
 
-# F5: margins by ground truth (Measured)
-fig, ax = plt.subplots(figsize=(7.6, 3.2))
-bins = np.arange(-2400, 2600, 100)
-ax.hist(m[gt == 1], bins=bins, color=BLUE, alpha=0.85, label='pneumonia (ground truth, n=122)', zorder=3,
-        edgecolor=SURF, linewidth=0.8)
-ax.hist(m[gt == 0], bins=bins, color=ORANGE, alpha=0.75, label='no pneumonia (ground truth, n=122)', zorder=3,
-        edgecolor=SURF, linewidth=0.8)
-ax.axvline(T, color=INK, lw=1.2, zorder=4)
-ax.set_ylim(0, 16.5)
-ax.text(T - 40, 16.2, 'T = -646\nflag if margin > T', ha='right', va='top', fontsize=8.5, color=INK)
-ax.set_xlabel('board margin = logit1 - logit0'); ax.set_ylabel('images')
-ax.set_title('Board margins on the 244 verification images')
-ax.legend(loc='upper right', fontsize=8.5, bbox_to_anchor=(1.0, 0.95))
-tag(ax, 'Measured (board, run 1)')
-fig.savefig(OUT / 'fig_margins.png'); plt.close(fig)
-
-# F6: ROC (Derived from measured margins)
-fig, ax = plt.subplots(figsize=(4.4, 4.2))
-ths = np.r_[np.inf, np.sort(np.unique(m))[::-1], -np.inf]
-tpr = [((m > t) & (gt == 1)).sum() / gt.sum() for t in ths]
-fpr = [((m > t) & (gt == 0)).sum() / (gt == 0).sum() for t in ths]
-ax.plot([0, 1], [0, 1], color=MUTED, lw=1, ls='--', zorder=2)
-ax.plot(fpr, tpr, color=BLUE, lw=2, zorder=3)
-op = (FP / (FP + TN), TP / (TP + FN))
-ax.scatter([op[0]], [op[1]], s=60, color=ORANGE, zorder=4, edgecolor=SURF, lw=1.5)
-ax.annotate(f'T = -646\nsens {op[1]:.3f}, spec {1 - op[0]:.3f}', op, xytext=(0.55, 0.62), fontsize=8.5,
-            color=INK, arrowprops=dict(arrowstyle='-', color=INK2, lw=0.8))
-ax.text(0.97, 0.06, f'AUROC {D["cls"]["auroc"]:.3f}\n95% CI {D["cls"]["auroc_boot_ci"][0]:.3f}-{D["cls"]["auroc_boot_ci"][1]:.3f}',
-        ha='right', fontsize=9, color=INK)
-ax.set_xlim(0, 1); ax.set_ylim(0, 1.02); ax.set_aspect('equal')
-ax.set_xlabel('1 - specificity'); ax.set_ylabel('sensitivity'); ax.set_title('ROC, 244 images')
-tag(ax, 'Derived (board margins)')
-fig.savefig(OUT / 'fig_roc.png'); plt.close(fig)
-
-# F7: utilisation (Measured, post-route)
-fig, ax = plt.subplots(figsize=(7.6, 3.0))
-res = ['lut', 'ff', 'bram', 'dsp']
-reslab = ['LUT', 'Flip-flops', 'Block RAM tiles', 'DSP slices']
-x = np.arange(4); w = 0.36
-for j, (tg, lab, col) in enumerate((('v1_2_hp64', 'flash_hp64 (V1.2.1)', BLUE),
-                                    ('v1_2_hp64_led', 'flash_hp64_led (V1.2.1-led)', AQUA))):
-    pv = [D['impl'][tg]['pct'][r] for r in res]
-    ax.bar(x + (j - 0.5) * w, pv, w * 0.92, color=col, label=lab, zorder=3)
-    for xx, v in zip(x + (j - 0.5) * w, pv):
-        ax.text(xx, v + 1, f'{v:.1f}%', ha='center', fontsize=8, color=INK2)
-ax.set_xticks(x); ax.set_xticklabels(reslab); ax.set_ylim(0, 70)
-ax.set_ylabel('% of xc7z020'); ax.set_title('Post-route utilisation')
-ax.legend(loc='upper left', fontsize=8.5); ax.grid(axis='x', visible=False)
-tag(ax, 'Measured (post-route reports)')
-fig.savefig(OUT / 'fig_utilisation.png'); plt.close(fig)
-
-print(json.dumps({k: D[k] for k in ('checks', 'runs')}, indent=1)[:3000])
-print('figures:', sorted(p.name for p in OUT.glob('*.png')))
+print(json.dumps({k: D[k] for k in ('checks', 'accel', 'prevalence', 'projection', 'scaling')}, indent=1)[:4000])
+print('figures:', sorted(p_.name for p_ in OUT.glob('*.png')))
