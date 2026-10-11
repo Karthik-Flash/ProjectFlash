@@ -395,33 +395,32 @@ D['scaling']['v0_params'] = dict(v0, total=sum(v0.values()), flatten_fc_share=ro
 (OUT / 'derived_numbers.json').write_text(json.dumps(D, indent=1) + '\n')
 
 # ================================================================ figures
-# Sized for an IEEE column (3.5 in) or page (7.16 in); the same files serve the report (PNG) and the
-# paper (PDF, in paper/figures/). Each figure carries its label: Measured, Derived or Derived projection.
-INK, INK2, MUTED, GRID, BASE, SURF = '#0b0b0b', '#52514e', '#898781', '#e1e0d9', '#c3c2b7', '#fcfcfb'
+# Sized for an IEEE column (3.5 in) or page (7.16 in), serif text, no in-plot titles: the captions in
+# the report and the paper carry the title and the label (Measured, Derived, Derived projection). The
+# same run writes the report's PNGs and the paper's vector PDFs (paper/figures/).
+INK, INK2, MUTED, GRID, BASE, SURF = '#0b0b0b', '#52514e', '#898781', '#e1e0d9', '#c3c2b7', '#ffffff'
 BLUE, ORANGE, AQUA = '#2a78d6', '#eb6834', '#1baf7a'
 W1, W2 = 3.5, 7.16
 plt.rcParams.update({
-    'font.family': 'DejaVu Sans', 'font.size': 8, 'text.color': INK,
-    'axes.edgecolor': BASE, 'axes.labelcolor': INK2, 'axes.labelsize': 8, 'axes.titlesize': 8.5,
-    'axes.titleweight': 'bold', 'axes.titlelocation': 'left', 'axes.facecolor': SURF, 'figure.facecolor': SURF,
-    'xtick.color': MUTED, 'ytick.color': MUTED, 'xtick.labelsize': 7, 'ytick.labelsize': 7,
+    'font.family': 'serif', 'font.serif': ['STIXGeneral', 'DejaVu Serif'], 'mathtext.fontset': 'stix',
+    'font.size': 8, 'text.color': INK, 'axes.edgecolor': BASE, 'axes.labelcolor': INK, 'axes.labelsize': 8,
+    'axes.facecolor': SURF, 'figure.facecolor': SURF,
+    'xtick.color': INK2, 'ytick.color': INK2, 'xtick.labelsize': 7.5, 'ytick.labelsize': 7.5,
     'axes.grid': True, 'grid.color': GRID, 'grid.linewidth': 0.5, 'axes.spines.top': False,
-    'axes.spines.right': False, 'legend.frameon': False, 'legend.fontsize': 6.8, 'savefig.dpi': 220,
+    'axes.spines.right': False, 'legend.frameon': False, 'legend.fontsize': 7.2, 'savefig.dpi': 220,
     'savefig.bbox': 'tight', 'savefig.pad_inches': 0.03, 'savefig.facecolor': SURF, 'pdf.fonttype': 42})
 PAPER = R / 'paper/figures'
 PAPER.mkdir(parents=True, exist_ok=True)
-for name in ('fig_demo_gallery_board.png', 'fig_demo_errors_board.png'):
-    (PAPER / name).write_bytes((OUT / name).read_bytes())
 
-def save(fig, name):
+def save(fig, name, width=W1):
+    # Fit the saved width (tight box, labels outside the axes included) to the column or page, so
+    # the paper includes it at 100% and the font sizes are the real ones.
+    for _ in range(4):
+        bb = fig.get_tightbbox(fig.canvas.get_renderer())
+        fig.set_size_inches(fig.get_figwidth() + width - 2 * 0.03 - bb.width, fig.get_figheight())
     fig.savefig(OUT / f'{name}.png')
     fig.savefig(PAPER / f'{name}.pdf', metadata={'CreationDate': None})
     plt.close(fig)
-
-def head(ax, title, label):
-    ax.set_title(title, pad=15)
-    ax.text(0.0, 1.025, label, transform=ax.transAxes, ha='left', va='bottom', fontsize=6.3, color=INK2,
-            bbox=dict(boxstyle='round,pad=0.2', fc='#f0efec', ec='none'))
 
 # F1: MACs per layer (Derived)
 fig, ax = plt.subplots(figsize=(W1, 2.0))
@@ -432,7 +431,6 @@ for x, v, n in zip(range(len(names)), vals, names):
     ax.text(x, v + 0.07, f'{macs[n]:,}', ha='center', va='bottom', fontsize=5.8, color=INK2)
 ax.set_ylim(0, 4.3)
 ax.set_ylabel('MACs per image (millions)')
-head(ax, 'MACs per layer, 224×224', 'Derived (layer_table.json)')
 ax.grid(axis='x', visible=False)
 save(fig, 'fig_layer_macs')
 
@@ -454,7 +452,6 @@ ax.text(1150, 0.47, 'sensitivity', color=INK2, fontsize=7)
 ax.text(T + 60, 0.03, 'T = −646', fontsize=6.8, color=INK2)
 ax.set_xlabel('threshold on margin (flag if margin > threshold)')
 ax.set_ylim(-0.02, 1.08)
-head(ax, 'Sensitivity and specificity vs threshold', 'Derived (board margins); illustrative only')
 ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.24), ncol=2, handletextpad=0.2, columnspacing=1.0)
 save(fig, 'fig_operating_characteristic')
 
@@ -476,17 +473,16 @@ ax.text(T - 40, 2.62, 'T', ha='right', fontsize=7, color=INK2)
 ax.set_yticks(range(3)); ax.set_yticklabels([c[1] for c in classes], fontsize=7)
 ax.set_ylim(-0.6, 2.75)
 ax.set_xlabel('board margin = logit1 − logit0')
-head(ax, 'Board margins by RSNA class', 'Measured (board run 1; classes from manifest.json)')
 ax.grid(axis='y', visible=False)
 save(fig, 'fig_margins_by_class')
 
 # Fc: subgroup AUROC, test set (Measured AUROC; CIs bootstrap or Derived Hanley-McNeil)
-nice = {'all test': 'All test patients', 'Opacity vs Normal': 'Pneumonia vs Normal',
-        'Opacity vs No Lung Opacity / Not Normal': 'Pneumonia vs Not Normal', 'view AP': 'AP films',
+nice = {'all test': 'All test', 'Opacity vs Normal': 'vs Normal only',
+        'Opacity vs No Lung Opacity / Not Normal': 'vs Not Normal only', 'view AP': 'AP films',
         'view PA': 'PA films', 'sex M': 'Male', 'sex F': 'Female'}
 rows = [(f"{nice[s['subgroup']]} ({s['n']:,})", s['auroc'],
          boot_test[1:] if s['subgroup'] == 'all test' else s['ci_hanley_mcneil'], BLUE) for s in sg]
-rows.append(('Board, 244 verification images', D['cls']['auroc'], D['cls']['auroc_boot_ci'], AQUA))
+rows.append(('Board, 244 images', D['cls']['auroc'], D['cls']['auroc_boot_ci'], AQUA))
 fig, ax = plt.subplots(figsize=(W1, 2.55))
 ys = list(range(len(rows) - 1, 0, -1)) + [-0.5]
 for yy, (lab, a, ci, col) in zip(ys, rows):
@@ -495,11 +491,10 @@ for yy, (lab, a, ci, col) in zip(ys, rows):
     ax.text(1.01, yy, f'{a:.3f} ({ci[0]:.3f}–{ci[1]:.3f})', transform=ax.get_yaxis_transform(), va='center',
             fontsize=6.3, color=INK, clip_on=False)
 ax.axvline(view_only, color=INK2, lw=0.8, ls='--', zorder=2)
-ax.text(view_only + 0.004, 7.55, f'view (AP/PA) alone {view_only:.3f}', fontsize=6.3, color=INK2)
+ax.text(view_only + 0.004, 7.55, f'AP/PA view alone {view_only:.3f}', fontsize=6.5, color=INK2)
 ax.set_yticks(ys); ax.set_yticklabels([r[0] for r in rows], fontsize=6.6)
 ax.set_xlim(0.66, 1.0); ax.set_ylim(-1.1, 8.0)
 ax.set_xlabel('AUROC (95% CI)')
-head(ax, 'Subgroup AUROC, 4,003 test patients', 'Measured AUROC (manifest.json); Derived CIs')
 ax.grid(axis='y', visible=False)
 save(fig, 'fig_subgroup_auroc')
 
@@ -523,11 +518,10 @@ ax.text(24, 99.5, 'NPV: P(no pneumonia | cleared)', fontsize=6.5, color=INK2, va
 ax.text(37, 27, 'PPV: P(pneumonia | flagged)', fontsize=6.5, color=INK2, ha='center')
 ax.set_xlim(0, 52); ax.set_ylim(0, 106)
 ax.set_xlabel('prevalence of pneumonia (%)'); ax.set_ylabel('%')
-head(ax, 'PPV and NPV vs prevalence', f'Derived (test operating point: sens {sens_t:.3f}, spec {spec_t:.3f})')
 save(fig, 'fig_ppv_npv_prevalence')
 
 # Fe: AFI case study: the corrupted run (Measured) next to what the PL received (Derived)
-fig = plt.figure(figsize=(W2, 2.6))
+fig = plt.figure(figsize=(W2, 2.75))
 gs = fig.add_gridspec(3, 2, width_ratios=[1, 1.35], wspace=0.18, hspace=0.75)
 ax = fig.add_subplot(gs[:, 0])
 ok = h32['decision'] == exp['exp_decision']
@@ -545,7 +539,6 @@ ax.text(0.03, 0.97, f'r = {D["afi"]["corr_all_logits"]:.2f} (logits)\nbit-exact 
         f'decisions agree {D["afi"]["decision_agreement"]}/244', transform=ax.transAxes, va='top', fontsize=6.8,
         color=INK)
 ax.legend(loc='lower right')
-head(ax, 'Board vs expected margin, flash_hp32', 'Measured (board, 2026-10-08)')
 im0 = i0.reshape(224, 224).astype(int)
 seen = dup_even(i0).reshape(224, 224).astype(int)
 y0, x0 = 96, 40
@@ -560,9 +553,7 @@ for j, (a, t_) in enumerate(zip(panels, titles)):
     axc.set_xlabel(t_, fontsize=6.4, labelpad=2); axc.set_xticks([]); axc.set_yticks([]); axc.grid(False)
     for xx in range(0, 129, 8):
         axc.axvline(xx - 0.5, color=ORANGE, lw=0.5, alpha=0.8)
-    if j == 0:
-        head(axc, 'What the PL received', 'Derived (dup_even model)')
-save(fig, 'fig_afi_case')
+save(fig, 'fig_afi_case', W2)
 
 # Ff: V2 projection, latency vs MACs per clock (Derived projection)
 fig, ax = plt.subplots(figsize=(W1, 2.45))
@@ -586,7 +577,6 @@ ax.set_xlim(0.85, 16.5); ax.set_ylim(6, 1300)
 ax.set_xlabel('MACs per clock (V1 = 1)'); ax.set_ylabel('compute latency (ms, log)')
 ax.text(0.98, 0.83, 'ideal scaling, memory bandwidth permitting;\n75 MHz needs the address path pipelined',
         transform=ax.transAxes, ha='right', va='top', fontsize=5.9, color=INK2)
-head(ax, 'V2: latency vs parallel MACs', 'Derived projection from the measured cycle count')
 save(fig, 'fig_v2_projection')
 
 print(json.dumps({k: D[k] for k in ('checks', 'accel', 'prevalence', 'projection', 'scaling')}, indent=1)[:4000])
