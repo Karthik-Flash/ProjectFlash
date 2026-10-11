@@ -144,7 +144,7 @@ written H-V0…H-V4, to keep them apart from the later "v0" and "V1".
 ```mermaid
 timeline
     title Project FLASH, from hackathon to verified board
-    section Hackathon (AMD FPGA Hackathon 2026, 5th place)
+    section AMD FPGA Hackathon 2026 (BITS Pilani Hyderabad, Mar 2026, 5th place)
         H-V0 to H-V4 : 28x28 classifier on the PYNQ-Z2, image in, decision out
                      : 5 of 8 hand-picked simulation tests pass
     section Audit (Sep 2026)
@@ -161,14 +161,15 @@ timeline
                    : LED demo, 244/244 re-verified
 ```
 
-**The hackathon (H-V0 to H-V4).** Source: the archived long-form brief, §4.
+**The hackathon (H-V0 to H-V4).** FLASH started at the AMD FPGA Hackathon 2026, held at BITS Pilani, Hyderabad Campus, in March 2026 and organised by IEEE BPHC (the IEEE Student Branch of BITS Pilani, Hyderabad Campus). The version
+history below is from the archived long-form brief, §4.
 H-V0 kept feature maps in a 62,720-flip-flop register array that could not be
 placed; it was moved to block RAM. H-V1 widened buses after silent integer
 overflow. H-V2 clock-gated the MAC pipeline, and Vivado's vector-less power
 estimate fell from 35.9 W to 7.2 W. Both are vector-less estimates that
 assume near-100% switching; neither was measured. H-V3 passed 5 of 8 hand-picked
 simulation tests, and the failures were blamed on the model. H-V4 ran end to
-end on the board. The team placed 5th.
+end on the board. FLASH placed 5th.
 
 **The audit and v0.** After the hackathon a golden model was written first,
 and every intermediate tensor from the simulator was compared with it. Five
@@ -208,13 +209,13 @@ scanner files (JPEG 2000, MONOCHROME1, modality LUT before window; manifest
 produced by the same preprocessing function, so the hardware sees exactly the
 pixels training saw. Running that function on the board itself is V2 work.
 
-**Data licence.** The radiographs and labels are the de-identified RSNA
-Pneumonia Detection Challenge data
-([RSNA](https://www.rsna.org/rsnai/ai-image-challenge/rsna-pneumonia-detection-challenge-2018);
-Shih et al., *Radiology: Artificial Intelligence* 1(1), e180041, 2019), drawn
-from the [NIH Chest X-ray Dataset](https://nihcc.app.box.com/v/ChestXray-NIHCC)
-(Wang et al., ChestX-ray8, IEEE CVPR 2017, pp. 3462–3471). The NIH Clinical
-Center is the data provider. RSNA's terms allow research use, forbid any
+**Data licence.** The radiographs and labels are the de-identified data of the
+[RSNA Pneumonia Detection Challenge](https://www.kaggle.com/competitions/rsna-pneumonia-detection-challenge) on Kaggle (RSNA, 2018), described
+by Shih et al., *Radiology: Artificial Intelligence* 1(1), e180041, 2019. They
+are drawn from the [NIH Chest X-ray Dataset](https://nihcc.app.box.com/v/ChestXray-NIHCC)
+(Wang et al., ChestX-ray8, IEEE CVPR 2017, pp. 3462–3471), and the NIH Clinical
+Center is the data provider. They are used under the competition's data-use
+rules and RSNA's terms of use. RSNA's terms allow research use, forbid any
 attempt to identify or contact the subjects, and require this attribution
 wherever the data is shared; the radiographs in Figures 6 and 11 and in the
 verification vectors come from this data.
@@ -291,7 +292,7 @@ subgroup AUROCs are all within 0.02 of V1.2's (`docs/audits/V1_audit_v1_2.md`,
 
 *Figure 2. Test-set AUROC by subgroup (Measured, `manifest.json`). The
 all-test interval is the manifest's bootstrap; the subgroup intervals are
-Derived with the Hanley-McNeil formula, which overall gives a slightly wider
+Derived with the Hanley–McNeil formula, which overall gives a slightly wider
 0.805–0.840. Bottom row: the board's own AUROC on the 244, with a bootstrap
 interval.*
 

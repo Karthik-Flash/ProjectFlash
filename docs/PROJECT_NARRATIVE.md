@@ -50,7 +50,7 @@ The FPGA has hard limits. It has about 140 Block RAM tiles (each 36 kilobits), 2
 
 ## Part 2: The starting point — PneumoniaFPGA (v0)
 
-The predecessor project, hosted at [github.com/Karthik-Flash/PneumoniaFPGA](https://github.com/Karthik-Flash/PneumoniaFPGA), established the basic idea and workflow. It trained a small convolutional neural network on pneumonia images, quantised the weights to 8-bit integers, and translated the network into Verilog that could be synthesised for the PYNQ-Z2. In its published state, the project reached **5 of 8** passing checks in its Vivado verification flow — the hardware did not agree with the reference on every case. That number is the starting point for V1. *(Before publishing, quote v0's exact wording of what the 8 checks were from its README, so the comparison is like-for-like.)*
+The predecessor project, hosted at [github.com/Karthik-Flash/PneumoniaFPGA](https://github.com/Karthik-Flash/PneumoniaFPGA), established the basic idea and workflow. It was built for the AMD FPGA Hackathon 2026, held at BITS Pilani, Hyderabad Campus, in March 2026 and organised by IEEE BPHC (the IEEE Student Branch of BITS Pilani, Hyderabad Campus), where it placed 5th. It trained a small convolutional neural network on pneumonia images, quantised the weights to 8-bit integers, and translated the network into Verilog that could be synthesised for the PYNQ-Z2. In its published state, the project reached **5 of 8** passing checks in its Vivado verification flow — the hardware did not agree with the reference on every case. That number is the starting point for V1. *(Before publishing, quote v0's exact wording of what the 8 checks were from its README, so the comparison is like-for-like.)*
 
 ### What v0 accomplished
 

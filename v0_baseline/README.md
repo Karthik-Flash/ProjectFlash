@@ -1,7 +1,9 @@
 # v0 baseline — 28×28 PneumoniaMNIST accelerator (closed)
 
 The audited successor of the hackathon design (H-V0…H-V4, repository
-[PneumoniaFPGA](https://github.com/Karthik-Flash/PneumoniaFPGA)). v0 exists to
+[PneumoniaFPGA](https://github.com/Karthik-Flash/PneumoniaFPGA)), built for the
+AMD FPGA Hackathon 2026 at BITS Pilani, Hyderabad Campus, in March 2026
+(organised by IEEE BPHC), where it placed 5th. v0 exists to
 prove the datapath arithmetic is correct before anything scales up. It is
 closed; the current hardware is V1.2.1 in `v1/` (see the
 [root README](../README.md)). This page preserves the v0 status that used to

@@ -12,7 +12,9 @@ model **bit for bit**.
 > for clinical use and must not be used to diagnose, screen or treat anyone.
 
 **Team FLASH** · BITS Pilani Hyderabad · Karthikeya Reddy (ML) · Yashwant Rajesh (Architecture) ·
-5th place, AMD FPGA Hackathon 2026 (predecessor: [PneumoniaFPGA](https://github.com/Karthik-Flash/PneumoniaFPGA))
+5th place at the AMD FPGA Hackathon 2026, held at BITS Pilani, Hyderabad Campus, in March 2026 and
+organised by IEEE BPHC (the IEEE Student Branch of BITS Pilani, Hyderabad Campus); hackathon
+repository: [PneumoniaFPGA](https://github.com/Karthik-Flash/PneumoniaFPGA)
 
 📄 **Full write-up: [`PROJECT_FLASH_REPORT.md`](PROJECT_FLASH_REPORT.md)** ·
 board results: [`docs/V1_board_results_v1_2.md`](docs/V1_board_results_v1_2.md) ·
@@ -180,12 +182,12 @@ MACs, and a pipelined address path for 75 MHz or more (report §13).
 
 ## Data and licence
 
-The radiographs and labels are the de-identified RSNA Pneumonia Detection
-Challenge data
-([RSNA](https://www.rsna.org/rsnai/ai-image-challenge/rsna-pneumonia-detection-challenge-2018);
-Shih et al., *Radiology: Artificial Intelligence* 1(1), e180041, 2019),
-drawn from the [NIH Chest X-ray Dataset](https://nihcc.app.box.com/v/ChestXray-NIHCC)
-(Wang et al., ChestX-ray8, IEEE CVPR 2017, pp. 3462–3471). The NIH Clinical
-Center is the data provider. RSNA's terms allow research use, forbid any
+The radiographs and labels are the de-identified data of the
+[RSNA Pneumonia Detection Challenge](https://www.kaggle.com/competitions/rsna-pneumonia-detection-challenge) on Kaggle (RSNA, 2018), described
+by Shih et al., *Radiology: Artificial Intelligence* 1(1), e180041, 2019. They
+are drawn from the [NIH Chest X-ray Dataset](https://nihcc.app.box.com/v/ChestXray-NIHCC)
+(Wang et al., ChestX-ray8, IEEE CVPR 2017, pp. 3462–3471), and the NIH Clinical
+Center is the data provider. They are used under the competition's data-use
+rules and RSNA's terms of use. RSNA's terms allow research use, forbid any
 attempt to identify or contact the subjects, and require this attribution
 wherever the data is shared, including the radiographs shown on this page.

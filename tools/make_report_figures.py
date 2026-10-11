@@ -476,7 +476,7 @@ ax.set_xlabel('board margin = logit1 − logit0')
 ax.grid(axis='y', visible=False)
 save(fig, 'fig_margins_by_class')
 
-# Fc: subgroup AUROC, test set (Measured AUROC; CIs bootstrap or Derived Hanley-McNeil)
+# Fc: subgroup AUROC, test set (Measured AUROC; CIs bootstrap or Derived Hanley–McNeil)
 nice = {'all test': 'All test', 'Opacity vs Normal': 'vs Normal only',
         'Opacity vs No Lung Opacity / Not Normal': 'vs Not Normal only', 'view AP': 'AP films',
         'view PA': 'PA films', 'sex M': 'Male', 'sex F': 'Female'}
