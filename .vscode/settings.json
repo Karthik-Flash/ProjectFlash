@@ -1,23 +1,18 @@
 {
-    // LaTeX Workshop: build paper/flash_v1.tex with its references on every save.
-    // A single pdflatex run prints citations as [?] and no reference list, so the
-    // only recipe here is pdflatex, bibtex, pdflatex, pdflatex (no Perl needed).
+    // LaTeX Workshop: build paper/flash_v1.tex on every save. The reference list is
+    // embedded in the .tex, so two pdflatex runs resolve every citation (no BibTeX,
+    // no Perl needed).
     "latex-workshop.latex.tools": [
         {
             "name": "pdflatex",
             "command": "pdflatex",
             "args": ["-synctex=1", "-interaction=nonstopmode", "-file-line-error", "%DOCFILE%"]
-        },
-        {
-            "name": "bibtex",
-            "command": "bibtex",
-            "args": ["%DOCFILE%"]
         }
     ],
     "latex-workshop.latex.recipes": [
         {
-            "name": "pdflatex, bibtex, pdflatex x2",
-            "tools": ["pdflatex", "bibtex", "pdflatex", "pdflatex"]
+            "name": "pdflatex x2",
+            "tools": ["pdflatex", "pdflatex"]
         }
     ],
     "latex-workshop.latex.recipe.default": "first",

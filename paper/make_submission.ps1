@@ -1,7 +1,6 @@
 # make_submission.ps1 -- build the paper, then pack flash_v1_submission.zip (gitignored)
-# with flash_v1.tex, refs.bib, the generated flash_v1.bbl and figures/, ready for
-# Overleaf or a conference portal. The .bbl lets the portal print the references
-# even if it does not run BibTeX.
+# with flash_v1.tex and figures/, ready for Overleaf or a conference portal. The
+# reference list is embedded in the .tex, so the portal needs no BibTeX run.
 #
 #   powershell -ExecutionPolicy Bypass -File paper\make_submission.ps1
 
@@ -10,9 +9,9 @@ try {
     & "$PSScriptRoot\build.ps1"
     if (-not $?) { throw 'build failed; no zip written' }
     $zip = Join-Path $PSScriptRoot 'flash_v1_submission.zip'
-    if (Test-Path $zip) { Remove-Item $zip }
+    if (Test-Path $zip) { Remove-Item -LiteralPath $zip }
     Add-Type -AssemblyName System.IO.Compression, System.IO.Compression.FileSystem
-    $files = @('flash_v1.tex', 'refs.bib', 'flash_v1.bbl') + (Get-ChildItem figures -File | ForEach-Object { "figures/$($_.Name)" })
+    $files = @('flash_v1.tex') + (Get-ChildItem figures -File | ForEach-Object { "figures/$($_.Name)" })
     $z = [System.IO.Compression.ZipFile]::Open($zip, 'Create')
     try {
         # forward-slash entry names: Windows Compress-Archive writes backslashes,
