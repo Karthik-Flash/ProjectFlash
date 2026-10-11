@@ -1,0 +1,7 @@
+# latexmkrc -- latexmk settings for the paper (also read by Overleaf).
+# `latexmk` in this folder runs pdflatex and bibtex as often as needed, so the
+# citations and the reference list are always resolved. latexmk needs Perl.
+@default_files = ('flash_v1.tex');
+$pdf_mode = 1;
+$pdflatex = 'pdflatex -interaction=nonstopmode -file-line-error -synctex=1 %O %S';
+$bibtex_use = 2;

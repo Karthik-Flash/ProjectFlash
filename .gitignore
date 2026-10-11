@@ -80,13 +80,19 @@ v1/vivado/
 # Board bundle, assembled locally by v1/board/make_board_bundle.ps1
 board_bundle/
 
-# LaTeX byproducts of the paper build (the PDF itself is committed)
+# LaTeX byproducts of the paper build (the PDF itself is committed; *.log and
+# *.zip, which covers paper/flash_v1_submission.zip, are ignored above)
 paper/*.aux
 paper/*.bbl
 paper/*.blg
 paper/*.out
+paper/*.synctex.gz
+paper/*.fls
+paper/*.fdb_latexmk
 
 # ---- OS / editor ---------------------------------------------------------------
 .DS_Store
 Thumbs.db
-.vscode/
+# editor settings stay local, except the shared LaTeX Workshop build recipe
+.vscode/*
+!.vscode/settings.json
