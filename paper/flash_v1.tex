@@ -1,5 +1,6 @@
-% Project FLASH V1 -- IEEE conference paper (IEEEtran, two-column).
-% Build in this folder: pdflatex flash_v1; bibtex flash_v1; pdflatex flash_v1; pdflatex flash_v1
+% Project FLASH V1: IEEE conference paper (IEEEtran, two-column).
+% Self-contained: the references are embedded below, so no BibTeX run is needed.
+% Build in this folder (figures/ next to this file):  pdflatex flash_v1  (run twice)
 % Every number traces to the repository: PROJECT_FLASH_REPORT.md cites the source file of each,
 % and the derived ones are recomputed by tools/make_report_figures.py into
 % docs/figures/derived_numbers.json. The plots in figures/ are written by that script.
@@ -8,7 +9,7 @@
 \usepackage{amsmath,amssymb}
 \usepackage{graphicx}
 \usepackage{booktabs}
-\usepackage{url}
+\usepackage[hyphens]{url}
 \usepackage{cite}
 \usepackage{tikz}
 \usetikzlibrary{arrows.meta,fit,positioning}
@@ -272,11 +273,11 @@ in layers whose size grows with the image. At 224$\times$224 its first dense lay
 need 802,816 weights. In V1, moving from 28$\times$28 (stage V1.1) to 224$\times$224 (V1.2)
 needed only new memory files (weights, biases, layer table) and one RTL change: the feature-map
 buffers grew from 64\,KB to 128\,KB, because conv1's output is 8$\times$112$\times$112 = 100,352
-bytes. The descriptor layout is identical at both sizes. MACs per image grow from 227,360 to 12,192,896, a factor of 53.6. That is less than the factor of 64 in
-pixels, because the small maps at 28$\times$28 round up (7$\to$4$\to$2$\to$1). In synthesis of
-the core alone, block RAM grows from 48.5 to 80.5 tiles. The convolution's address arithmetic
-($c\cdot h\cdot w + y\cdot w + x$, a DSP multiply-add into the block-RAM address) is the
-critical path at both sizes.
+bytes. The descriptor layout is identical at both sizes. MACs per image grow from 227,360 to
+12,192,896, a factor of 53.6. That is less than the factor of 64 in pixels, because the small
+maps at 28$\times$28 round up (7$\to$4$\to$2$\to$1). In synthesis of the core alone, block RAM
+grows from 48.5 to 80.5 tiles. The convolution's address arithmetic ($c\cdot h\cdot w + y\cdot w
++ x$, a DSP multiply-add into the block-RAM address) is the critical path at both sizes.
 
 \textit{The AXI wrapper.} \code{top\_v1\_axi} accepts the image as 32-bit AXI-Stream beats,
 four pixels per beat, 12,544 beats per image, and feeds the core one pixel per clock. It
@@ -474,9 +475,9 @@ set, where pneumonia against Normal scores 0.936 and against Not Normal 0.738.
 \centering
 \includegraphics[width=\columnwidth]{figures/fig_subgroup_auroc.pdf}
 \caption{Test-set AUROC by subgroup (measured, manifest of the training run). Intervals are the
-bootstrap for all test patients and for the board's 244 images, and Hanley--McNeil \cite{hanley1982}
-otherwise (derived), which overall gives a slightly wider 0.805--0.840. The dashed line is the
-AUROC of the radiographic projection alone.}
+bootstrap for all test patients and for the board's 244 images, and Hanley--McNeil
+\cite{hanley1982} otherwise (derived), which overall gives a slightly wider 0.805--0.840. The
+dashed line is the AUROC of the radiographic projection alone.}
 \label{fig:subgroup}
 \end{figure}
 
@@ -651,27 +652,184 @@ scripts that derive every number and figure in this paper are available at
 \url{https://github.com/Karthik-Flash/ProjectFlash} (tag \code{v1.2.1-hw}). The data are those of
 the RSNA Pneumonia Detection Challenge on Kaggle \cite{rsnadata}, described by Shih \textit{et al.}
 \cite{shih2019rsna}, and the radiographs originate from the NIH Chest X-ray dataset
-\cite{nihdata,wang2017chestxray8}. The verification vectors are
-regenerated from the data by the project's training notebook with a fixed seed.
+\cite{nihdata,wang2017chestxray8}. The verification vectors are regenerated from the data by the
+project's training notebook with a fixed seed.
 
 \section*{Ethics and Data Licence}
 
 This study used only de-identified, publicly available radiographs and annotations from the RSNA
 Pneumonia Detection Challenge \cite{rsnadata,shih2019rsna}, under the competition's data-use rules
 and RSNA's terms of use. RSNA's terms permit research use and prohibit any attempt to identify or
-contact the subjects. The NIH Clinical Center is the provider of the
-radiographs. No data were collected from patients for this work. The paper reproduces no
-radiographs; the figures in the repository that show radiographs carry the attribution that the
-terms require.
+contact the subjects. The NIH Clinical Center is the provider of the radiographs. No data were
+collected from patients for this work. The paper reproduces no radiographs; the figures in the
+repository that show radiographs carry the attribution that the terms require.
 
 \section*{Acknowledgment}
 
 The first FLASH prototype was developed for the AMD FPGA Hackathon 2026, held at BITS Pilani,
 Hyderabad Campus, in March 2026 and organised by IEEE BPHC, the IEEE Student Branch of BITS
-Pilani, Hyderabad Campus. FLASH placed 5th, and we thank the organisers. We acknowledge the NIH Clinical Center as the provider of the chest
-radiographs, and the RSNA and the Society of Thoracic Radiology for the pneumonia annotations.
+Pilani, Hyderabad Campus. FLASH placed 5th, and we thank the organisers. We acknowledge the NIH
+Clinical Center as the provider of the chest radiographs, and the RSNA and the Society of
+Thoracic Radiology for the pneumonia annotations.
 
-\bibliographystyle{IEEEtran}
-\bibliography{refs}
+\begin{thebibliography}{32}
+
+\bibitem{who2022pneumonia}
+World Health Organization, ``Pneumonia in children,'' Fact sheet, Nov. 2022. [Online].
+Available: \url{https://www.who.int/news-room/fact-sheets/detail/pneumonia}
+
+\bibitem{wang2017chestxray8}
+X.~Wang, Y.~Peng, L.~Lu, Z.~Lu, M.~Bagheri, and R.~M. Summers, ``{ChestX-Ray8}:
+Hospital-scale chest {X}-ray database and benchmarks on weakly-supervised classification and
+localization of common thorax diseases,'' in \emph{Proc. IEEE Conf. Computer Vision and Pattern
+Recognition (CVPR)}, 2017, pp. 3462--3471.
+
+\bibitem{rajpurkar2017chexnet}
+P.~Rajpurkar, J.~Irvin, K.~Zhu, B.~Yang, H.~Mehta, T.~Duan, D.~Ding, A.~Bagul, C.~Langlotz,
+K.~Shpanskaya, M.~P. Lungren, and A.~Y. Ng, ``{CheXNet}: Radiologist-level pneumonia detection
+on chest {X}-rays with deep learning,'' arXiv:1711.05225, 2017. [Online]. Available:
+\url{https://arxiv.org/abs/1711.05225}
+
+\bibitem{shih2019rsna}
+G.~Shih, C.~C. Wu, S.~S. Halabi, M.~D. Kohli, L.~M. Prevedello, T.~S. Cook, A.~Sharma
+\emph{et~al.}, ``Augmenting the National Institutes of Health chest radiograph dataset with
+expert annotations of possible pneumonia,'' \emph{Radiology: Artificial Intelligence}, vol.~1,
+no.~1, p. e180041, 2019.
+
+\bibitem{kermany2018}
+D.~S. Kermany, M.~Goldbaum, W.~Cai, C.~C.~S. Valentim, H.~Liang, S.~L. Baxter \emph{et~al.},
+``Identifying medical diagnoses and treatable diseases by image-based deep learning,''
+\emph{Cell}, vol.~172, no.~5, pp. 1122--1131.e9, 2018.
+
+\bibitem{yang2023medmnist}
+J.~Yang, R.~Shi, D.~Wei, Z.~Liu, L.~Zhao, B.~Ke, H.~Pfister, and B.~Ni, ``{MedMNIST} v2: A
+large-scale lightweight benchmark for {2D} and {3D} biomedical image classification,''
+\emph{Scientific Data}, vol.~10, p.~41, 2023.
+
+\bibitem{zech2018}
+J.~R. Zech, M.~A. Badgeley, M.~Liu, A.~B. Costa, J.~J. Titano, and E.~K. Oermann, ``Variable
+generalization performance of a deep learning model to detect pneumonia in chest radiographs: A
+cross-sectional study,'' \emph{PLOS Medicine}, vol.~15, no.~11, p. e1002683, 2018.
+
+\bibitem{degrave2021}
+A.~J. DeGrave, J.~D. Janizek, and S.-I. Lee, ``{AI} for radiographic {COVID-19} detection selects
+shortcuts over signal,'' \emph{Nature Machine Intelligence}, vol.~3, no.~7, pp. 610--619, 2021.
+
+\bibitem{geirhos2020}
+R.~Geirhos, J.-H. Jacobsen, C.~Michaelis, R.~Zemel, W.~Brendel, M.~Bethge, and F.~A. Wichmann,
+``Shortcut learning in deep neural networks,'' \emph{Nature Machine Intelligence}, vol.~2,
+no.~11, pp. 665--673, 2020.
+
+\bibitem{jacob2018}
+B.~Jacob, S.~Kligys, B.~Chen, M.~Zhu, M.~Tang, A.~Howard, H.~Adam, and D.~Kalenichenko,
+``Quantization and training of neural networks for efficient integer-arithmetic-only
+inference,'' in \emph{Proc. IEEE/CVF Conf. Computer Vision and Pattern Recognition (CVPR)},
+2018, pp. 2704--2713.
+
+\bibitem{lin2014nin}
+M.~Lin, Q.~Chen, and S.~Yan, ``Network in network,'' in \emph{Proc. Int. Conf. Learning
+Representations (ICLR)}, 2014. [Online]. Available: \url{https://arxiv.org/abs/1312.4400}
+
+\bibitem{springenberg2015}
+J.~T. Springenberg, A.~Dosovitskiy, T.~Brox, and M.~Riedmiller, ``Striving for simplicity: The
+all convolutional net,'' in \emph{Proc. Int. Conf. Learning Representations (ICLR), Workshop
+Track}, 2015. [Online]. Available: \url{https://arxiv.org/abs/1412.6806}
+
+\bibitem{zhang2015}
+C.~Zhang, P.~Li, G.~Sun, Y.~Guan, B.~Xiao, and J.~Cong, ``Optimizing {FPGA}-based accelerator
+design for deep convolutional neural networks,'' in \emph{Proc. ACM/SIGDA Int. Symp.
+Field-Programmable Gate Arrays (FPGA)}, 2015, pp. 161--170.
+
+\bibitem{qiu2016}
+J.~Qiu, J.~Wang, S.~Yao, K.~Guo, B.~Li, E.~Zhou, J.~Yu, T.~Tang, N.~Xu, S.~Song, Y.~Wang, and
+H.~Yang, ``Going deeper with embedded {FPGA} platform for convolutional neural network,'' in
+\emph{Proc. ACM/SIGDA Int. Symp. Field-Programmable Gate Arrays (FPGA)}, 2016, pp. 26--35.
+
+\bibitem{umuroglu2017finn}
+Y.~Umuroglu, N.~J. Fraser, G.~Gambardella, M.~Blott, P.~Leong, M.~Jahre, and K.~Vissers,
+``{FINN}: A framework for fast, scalable binarized neural network inference,'' in \emph{Proc.
+ACM/SIGDA Int. Symp. Field-Programmable Gate Arrays (FPGA)}, 2017, pp. 65--74.
+
+\bibitem{duarte2018hls4ml}
+J.~Duarte, S.~Han, P.~Harris, S.~Jindariani, E.~Kreinar, B.~Kreis, J.~Ngadiuba, M.~Pierini
+\emph{et~al.}, ``Fast inference of deep neural networks in {FPGAs} for particle physics,''
+\emph{Journal of Instrumentation}, vol.~13, no.~07, p. P07027, 2018.
+
+\bibitem{sze2017}
+V.~Sze, Y.-H. Chen, T.-J. Yang, and J.~S. Emer, ``Efficient processing of deep neural networks:
+A tutorial and survey,'' \emph{Proceedings of the IEEE}, vol.~105, no.~12, pp. 2295--2329, 2017.
+
+\bibitem{mongan2020claim}
+J.~Mongan, L.~Moy, and C.~E. Kahn,~Jr., ``Checklist for artificial intelligence in medical
+imaging ({CLAIM}): A guide for authors and reviewers,'' \emph{Radiology: Artificial
+Intelligence}, vol.~2, no.~2, p. e200029, 2020.
+
+\bibitem{collins2024tripodai}
+G.~S. Collins, K.~G.~M. Moons, P.~Dhiman, R.~D. Riley, A.~L. Beam, B.~Van~Calster,
+M.~Ghassemi, X.~Liu \emph{et~al.}, ``{TRIPOD+AI} statement: Updated guidance for reporting
+clinical prediction models that use regression or machine learning methods,'' \emph{BMJ},
+vol.~385, p. e078378, 2024.
+
+\bibitem{wilson1927}
+E.~B. Wilson, ``Probable inference, the law of succession, and statistical inference,''
+\emph{Journal of the American Statistical Association}, vol.~22, no.~158, pp. 209--212, 1927.
+
+\bibitem{efron1979}
+B.~Efron, ``Bootstrap methods: Another look at the jackknife,'' \emph{The Annals of
+Statistics}, vol.~7, no.~1, pp. 1--26, 1979.
+
+\bibitem{hanley1982}
+J.~A. Hanley and B.~J. McNeil, ``The meaning and use of the area under a receiver operating
+characteristic ({ROC}) curve,'' \emph{Radiology}, vol.~143, no.~1, pp. 29--36, 1982.
+
+\bibitem{iec62304}
+\emph{{IEC} 62304:2006, Medical Device Software: Software Life Cycle Processes}, International
+Electrotechnical Commission, 2006, Amendment 1, 2015. [Online]. Available:
+\url{https://webstore.iec.ch/publication/6792}
+
+\bibitem{iso14971}
+\emph{{ISO} 14971:2019, Medical Devices: Application of Risk Management to Medical Devices},
+International Organization for Standardization, 2019. [Online]. Available:
+\url{https://www.iso.org/standard/72704.html}
+
+\bibitem{iso13485}
+\emph{{ISO} 13485:2016, Medical Devices: Quality Management Systems, Requirements for
+Regulatory Purposes}, International Organization for Standardization, 2016. [Online].
+Available: \url{https://www.iso.org/standard/59752.html}
+
+\bibitem{fda2021aiml}
+U.S. Food and Drug Administration, ``Artificial intelligence/machine learning ({AI/ML})-based
+software as a medical device ({SaMD}) action plan,'' Center for Devices and Radiological
+Health, Tech. Rep., Jan. 2021. [Online]. Available:
+\url{https://www.fda.gov/media/145022/download}
+
+\bibitem{rsnadata}
+Radiological Society of North America, ``{RSNA} Pneumonia Detection Challenge,'' Kaggle
+competition, 2018. [Online]. Available:
+\url{https://www.kaggle.com/competitions/rsna-pneumonia-detection-challenge}
+
+\bibitem{dicom}
+National Electrical Manufacturers Association, \emph{Digital Imaging and Communications in
+Medicine ({DICOM}) Standard, {NEMA} {PS3} / {ISO} 12052}. [Online]. Available:
+\url{https://dicom.nema.org/medical/dicom/current/output/html/part01.html}
+
+\bibitem{pg021}
+AMD, \emph{{AXI DMA} {LogiCORE} {IP} Product Guide ({PG021}), v7.1}. [Online]. Available:
+\url{https://docs.amd.com/r/en-US/pg021_axi_dma}
+
+\bibitem{pynq}
+AMD, ``{PYNQ}: Python productivity for adaptive computing platforms,'' open-source project.
+[Online]. Available: \url{https://www.pynq.io/}
+
+\bibitem{ug585}
+Xilinx, Inc. (now AMD), \emph{Zynq-7000 {SoC} Technical Reference Manual ({UG585})},
+Appendix~B, AFI registers. [Online]. Available:
+\url{https://docs.amd.com/v/u/en-US/ug585-Zynq-7000-TRM}
+
+\bibitem{nihdata}
+NIH Clinical Center, ``{NIH} Chest X-ray Dataset,'' download site named in the RSNA terms of
+use. [Online]. Available: \url{https://nihcc.app.box.com/v/ChestXray-NIHCC}
+
+\end{thebibliography}
 
 \end{document}
