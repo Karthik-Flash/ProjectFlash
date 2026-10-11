@@ -1,4 +1,4 @@
-# docs/ — index
+# docs/: index
 
 Start with the project report, [`../PROJECT_FLASH_REPORT.md`](../PROJECT_FLASH_REPORT.md).
 It summarises everything below and cites these files for every number.
@@ -11,6 +11,7 @@ It summarises everything below and cites these files for every number.
 | [`V1_board_debug_log.md`](V1_board_debug_log.md) | The 2026-10-08 board failure (0/244), the offline hypothesis search, the AFI root cause, and its confirmation on 2026-10-09 ("Resolved"). |
 | [`BRINGUP_STATUS.md`](BRINGUP_STATUS.md) | Status (complete) and the record of the unattended wrapper / block-design / bitstream run of 2026-10-07. |
 | [`V1_CHANGELOG.md`](V1_CHANGELOG.md) | V1 history step by step, citing commits (v1_0 → V1.2.1-led). |
+| [`VIVADO_PYNQ_GUIDE.md`](VIVADO_PYNQ_GUIDE.md) | The Vivado and PYNQ flow from RTL to a running board, step by step, checked against the scripts. |
 | [`PROJECT_NARRATIVE.md`](PROJECT_NARRATIVE.md) | Long-form narrative for a general reader; Part 11 covers the board. |
 | [`Project_FLASH_brief.pdf`](Project_FLASH_brief.pdf) | The 14-page project brief (pre-board status); defines the number labels the report uses. |
 | [`HANDOFF_V1_board_results.md`](HANDOFF_V1_board_results.md) | Close-out task list of 2026-10-09 (historical; its file paths predate the restructure). |
@@ -21,6 +22,7 @@ It summarises everything below and cites these files for every number.
 |---|---|
 | [`board_runs/2026-10-08/`](board_runs/2026-10-08/README.md) | First board run (0/244), smoke test, probe files. Raw, byte for byte. |
 | [`board_runs/2026-10-09/`](board_runs/2026-10-09/README.md) | Runs 1–3 (244/244, 0/244, 244/244), CSVs, summaries, executed LED demo. Raw, byte for byte. |
+| [`reports/README.md`](reports/README.md) | Index of every Vivado report: what it shows and which build it came from. |
 | [`reports/impl/`](reports/impl/) | Post-route timing, utilisation and power reports: `*_v1_2` (V1.2, HP0 32-bit), `*_v1_2_hp64` (V1.2.1), `*_v1_2_hp64_led` (V1.2.1-led). |
 | [`reports/synth/`](reports/synth/) | Synthesis results of `top_v1` alone: V1.1 (28×28) and V1.2 (224×224), with their reports. |
 | [`audits/`](audits/) | Independent audits of the V1.1 and V1.2 Colab exports (golden model vs 244 vectors and 60 traces, 0 mismatches). |

@@ -1,4 +1,4 @@
-# PYNQ-Z2 board run — Project FLASH V1.2.1
+# PYNQ-Z2 board run: Project FLASH V1.2.1
 
 **Tested on PYNQ 3.1.1** (PYNQ-Z2 image), 2026-10-09: `flash_hp64` and
 `flash_hp64_led` are bit-exact on all 244 verification images. Results:
@@ -10,7 +10,7 @@ Files here:
 | File | What |
 |---|---|
 | `flash_hp64.bit`, `.hwh` | **V1.2.1 overlay (verification default).** HP0 and DMA memory side 64-bit. SHA-256 `0ee58d6c924cd162` / `7011237c69968c86`. |
-| `flash_hp64_led.bit`, `.hwh` | **V1.2.1-led overlay (demo default).** `flash_hp64` plus `axi_gpio_led` at 0x41200000 driving LD0–LD3 and the two RGB LEDs; same accelerator netlist. SHA-256 `7e0c3394fac1b57d` / `2b37db60135ed638`. |
+| `flash_hp64_led.bit`, `.hwh` | **V1.2.1-led overlay (demo default).** `flash_hp64` plus `axi_gpio_led` at 0x41200000 driving LD0 to LD3 and the two RGB LEDs; same accelerator netlist. SHA-256 `7e0c3394fac1b57d` / `2b37db60135ed638`. |
 | `flash_hp32.bit`, `.hwh` | V1.2 overlay, HP0 32-bit (called `flash.bit` on 2026-10-08). Kept only for the AFI confirmation test; it gives 0/244 unless the AFI is forced. SHA-256 `396a219b10690f26` / `5f8c18af7bdf3650`. |
 | `flash_v1_2_board.ipynb` | Verification notebook. `BIT` selects the overlay; it runs a read-only AFI-vs-`.hwh` check, an optional `AFI_FORCE` cell (off), the VERSION check, the 244-image bit-exact sweep, saved evidence files, latency, throughput, the threshold demo, sens/spec and the ARM baseline. |
 | `flash_v1_2_demo.ipynb` | Live demo notebook: disclaimer, LED self-test, a 12-image gallery (FPGA vs ARM), a live 244-image sweep, a slider with LED output, and limitations. It refuses to run on an AFI mismatch and never writes the AFI. |
@@ -74,13 +74,13 @@ extracted if it fails. Expect the six overlay files, both notebooks, `model`,
 `tools`, `vectors`, and a count of `249` (244 images + 5 expectation/label
 files).
 
-## 5. Verification run — lab order
+## 5. Verification run: lab order
 
 Browser → <http://192.168.2.99:9090>, password `xilinx`, open
 `flash_v1_2/flash_v1_2_board.ipynb`. Each run saves
 `results_<basename>.csv` and `summary_<basename>.json` next to the notebook.
 
-**Run 1 — `flash_hp64` on a freshly booted board (the result that counts).**
+**Run 1: `flash_hp64` on a freshly booted board (the result that counts).**
 
 1. Power-cycle or reboot the board, so the AFI is in its boot state.
 2. Leave `BIT = 'flash_hp64.bit'` and `AFI_FORCE = False`. Run all cells.
@@ -94,7 +94,7 @@ Browser → <http://192.168.2.99:9090>, password `xilinx`, open
    - the ARM baseline assert passes (about 0.7 s per image)
 4. Files: `results_flash_hp64.csv`, `summary_flash_hp64.json`.
 
-**Run 2 — `flash_hp32` root-cause confirmation (same boot, optional).**
+**Run 2: `flash_hp32` root-cause confirmation (same boot, optional).**
 
 1. *Kernel → Restart*. Set `BIT = 'flash_hp32.bit'`, keep `AFI_FORCE = False`,
    run all cells. Expect AFI check `MISMATCH` and the old result: 0/244,
@@ -120,7 +120,7 @@ is present, otherwise `flash_hp64.bit`; the LED code is then a no-op.
 
 - **Load cell:** SHA-256, VERSION, FCLK0, AFI check. It raises "reboot the
   board and re-run" on a mismatch.
-- **LED self-test:** LD0–LD3 on for 1 s, then both RGB LEDs red, green and
+- **LED self-test:** LD0 to LD3 on for 1 s, then both RGB LEDs red, green and
   blue (0.5 s each), then off.
 - **Gallery:** the first 6 true positives and first 6 true negatives by index
   (a fixed rule, not cherry-picked), each run live on the FPGA and on the ARM
@@ -128,7 +128,7 @@ is present, otherwise `flash_hp64.bit`; the LED code is then a no-op.
   mean, 3.8×.
 - **Sweep:** all 244 live, about 57 s. Measured: 244/244, sensitivity 0.959,
   specificity 0.467, AUROC 0.8367.
-- **Slider:** runs any image live. Pneumonia: LD0–LD3 blink at 4 Hz for
+- **Slider:** runs any image live. Pneumonia: LD0 to LD3 blink at 4 Hz for
   2.5 s with the RGB LEDs red. Negative: RGB green for 1.5 s.
 - **Limitations:** the first false positive (image 1) and false negative
   (image 61), shown with their images.
