@@ -1,0 +1,4 @@
+master_address_space,slave_segment,offset,range_bytes,high_address
+/axi_dma_0/Data_MM2S,SEG_processing_system7_0_HP0_DDR_LOWOCM,0x00000000,0x20000000,0x1FFFFFFF
+/processing_system7_0/Data,SEG_axi_dma_0_Reg,0x40400000,0x00010000,0x4040FFFF
+/processing_system7_0/Data,SEG_top_v1_axi_0_reg0,0x40000000,0x00001000,0x40000FFF
