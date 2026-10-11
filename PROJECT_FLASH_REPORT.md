@@ -1,4 +1,4 @@
-# Project FLASH — V1 Project Report
+# Project FLASH: V1 Project Report
 
 **An offline pneumonia screener built as a bit-exact neural network in FPGA hardware**
 
@@ -58,9 +58,8 @@ methodological result of this report (Section 10).
 | Chip power | 1.494 W total (1.256 W in the ARM side) | Synthesis estimate | `docs/reports/impl/V1_impl_power_v1_2_hp64.rpt` |
 | Throughput and efficiency | 0.1333 GOP/s, 99.97% of the 1-MAC-per-clock peak | Derived | `derived_numbers.json` (`accel`) |
 
-Three things are V2 future work, not V1 results (Section 13): a board run on
-all 4,003 test images, measured board power, and DICOM end to end on the
-board.
+Three items are left to V2 (Section 13): a board run on all 4,003 test
+images, measured board power, and DICOM end to end on the board.
 
 ---
 
@@ -80,13 +79,14 @@ Most AI tools that read X-rays run on a server or in the cloud. That needs a
 reliable connection and sends patient images off site. FLASH aims at a small
 device that reads the film where it is taken and gives an immediate first
 opinion, "likely normal" or "send for an urgent read". It is meant to help a
-clinician prioritise, not to replace a radiologist.
+clinician decide which films to read first.
 
-We chose an FPGA rather than a phone or a small computer for one main reason:
-the chip computes exactly what we validated, every time, with no operating
-system or floating-point library in the way. That property is easy to test
-and easy to explain to a regulator. Low power is the second reason; so far
-it rests on a Vivado estimate, and measuring it is V2 work (Section 13).
+We chose an FPGA over a phone or a small computer mainly because the chip
+computes exactly the integers that were validated, on every run, with no
+operating system or floating-point library in between. Its outputs can
+therefore be compared exactly with the reference model, which also makes the
+device easier to explain to a regulator. Low power is the second reason; so
+far it rests on a Vivado estimate, and measuring it is V2 work (Section 13).
 
 ---
 
@@ -107,8 +107,8 @@ per image (Derived, from `layer_table.json`).
 **Integers.** FLASH is trained directly in integer units. The weights are
 8-bit signed, activations 8-bit unsigned, biases 32-bit. After each layer the
 sum is divided by a power of two (a bit shift) and clamped to 0..255, and the
-clamp doubles as the ReLU activation. The numbers the chip stores *are* the
-trained weights: no conversion step can go wrong.
+clamp doubles as the ReLU activation. The numbers the chip stores are the
+trained weights themselves, so no conversion step is needed.
 
 **The two scores.** The last layer outputs two logits, for "normal" and
 "pneumonia". The decision uses their difference, the *margin*. An image is
@@ -127,8 +127,8 @@ block-RAM tiles of 36 Kb and 220 DSP multipliers
 **Correctness vocabulary.** The *golden model* is an independent NumPy
 program, written in int64, that computes exactly what the hardware should.
 *Bit-exact* means two computations produce identical integers. **AUROC** is
-the chance that a random sick patient scores above a random healthy one: 0.5
-is a coin toss, 1.0 is perfect, and it does not depend on T. **Sensitivity**
+the probability that a random sick patient scores above a random healthy
+one. 0.5 is chance level, 1.0 is perfect, and it does not depend on T. **Sensitivity**
 is the share of sick patients that are flagged. **Specificity** is the share
 of healthy patients that are cleared.
 
@@ -136,9 +136,9 @@ of healthy patients that are cleared.
 
 ## 4. How the project got here
 
-The design went through three phases: five hackathon versions that made it
-work, an audit that made it correct, and the V1 stages that made it general
-and then put it on the board. Following the brief, the hackathon versions are
+The design went through three phases: five hackathon versions, an audit of
+the result, and the V1 stages, which generalised the design and brought it to
+the board. Following the brief, the hackathon versions are
 written H-V0…H-V4, to keep them apart from the later "v0" and "V1".
 
 ```mermaid
@@ -165,8 +165,8 @@ timeline
 H-V0 kept feature maps in a 62,720-flip-flop register array that could not be
 placed; it was moved to block RAM. H-V1 widened buses after silent integer
 overflow. H-V2 clock-gated the MAC pipeline, and Vivado's vector-less power
-estimate fell from 35.9 W to 7.2 W. Both of those are estimates assuming
-near-100% switching, not measurements. H-V3 passed 5 of 8 hand-picked
+estimate fell from 35.9 W to 7.2 W. Both are vector-less estimates that
+assume near-100% switching; neither was measured. H-V3 passed 5 of 8 hand-picked
 simulation tests, and the failures were blamed on the model. H-V4 ran end to
 end on the board. The team placed 5th.
 
@@ -176,9 +176,9 @@ hidden defects appeared (Section 7). With them fixed, the 28×28 design
 matches the golden model on 244 of 244 images and every intermediate layer
 (Measured; `v0_baseline/README.md`). It meets 75 MHz after placement with
 about 83.7 MHz possible (Measured), and a SAIF-based power analysis gives
-0.116 W (Synthesis estimate). The honest model accuracy is 84.7% balanced
-accuracy on PneumoniaMNIST. That is lower than the hackathon's 95.4%, which
-the buggy hardware could never have produced.
+0.116 W (Synthesis estimate). The model's balanced accuracy on
+PneumoniaMNIST is 84.7%. The hackathon had reported 95.4%, but that figure
+came from the defective datapath and is not a valid result.
 
 **Why V1.** v0 was tied to 28×28 by its dense layer and built from
 hand-written per-layer modules. It had no adjustable threshold, and it used
@@ -204,8 +204,20 @@ is split by patient into 18,678 for training, 4,003 for validation and 4,003
 for testing. The test prevalence is 22.5% (`manifest.json`). The
 preprocessing passed all seven of its self-tests, including on genuine
 scanner files (JPEG 2000, MONOCHROME1, modality LUT before window; manifest
-`preprocessing self-test`). The board runs the same preprocessing function,
-so the hardware sees exactly the pixels training saw.
+`preprocessing self-test`). The verification images sent to the board were
+produced by the same preprocessing function, so the hardware sees exactly the
+pixels training saw. Running that function on the board itself is V2 work.
+
+**Data licence.** The radiographs and labels are the de-identified RSNA
+Pneumonia Detection Challenge data
+([RSNA](https://www.rsna.org/rsnai/ai-image-challenge/rsna-pneumonia-detection-challenge-2018);
+Shih et al., *Radiology: Artificial Intelligence* 1(1), e180041, 2019), drawn
+from the [NIH Chest X-ray Dataset](https://nihcc.app.box.com/v/ChestXray-NIHCC)
+(Wang et al., ChestX-ray8, IEEE CVPR 2017, pp. 3462–3471). The NIH Clinical
+Center is the data provider. RSNA's terms allow research use, forbid any
+attempt to identify or contact the subjects, and require this attribution
+wherever the data is shared; the radiographs in Figures 6 and 11 and in the
+verification vectors come from this data.
 
 **Network.** Five stride-2 3×3 convolutions, then global average pooling
 (GAP), then a 64→2 dense layer.
@@ -251,7 +263,8 @@ rules exactly:
 - The sum is shifted right by a per-layer amount (7, 7, 7, 8, 8) and clamped
   to 0..255.
 - GAP sums each 7×7 map and shifts right by 6, i.e. divides by 64 instead of
-  49. That is a wire, not a divider, and training sees the same thing.
+  49. The division is a shift and needs no divider, and training uses the
+  same arithmetic.
 - margin = logit1 − logit0. The image is flagged if margin > T.
 
 **Training and threshold.** Training runs in two phases: unconstrained
@@ -272,14 +285,13 @@ locked before the test set was examined. For V1.2, T = −646 (manifest).
 
 Larger images help a little, but the confidence intervals overlap. V1.1's
 subgroup AUROCs are all within 0.02 of V1.2's (`docs/audits/V1_audit_v1_2.md`,
-"V1.1 vs V1.2"). Figure 2 breaks
-V1.2's test AUROC down by subgroup.
+"V1.1 vs V1.2"). Figure 2 breaks V1.2's test AUROC down by subgroup.
 
 ![Subgroup AUROC](docs/figures/fig_subgroup_auroc.png)
 
 *Figure 2. Test-set AUROC by subgroup (Measured, `manifest.json`). The
 all-test interval is the manifest's bootstrap; the subgroup intervals are
-Derived with the Hanley–McNeil formula, which overall gives a slightly wider
+Derived with the Hanley-McNeil formula, which overall gives a slightly wider
 0.805–0.840. Bottom row: the board's own AUROC on the 244, with a bootstrap
 interval.*
 
@@ -287,12 +299,12 @@ What a reviewer should take from Figure 2:
 - The network separates pneumonia from clearly normal lungs well (0.936),
   and from other lung findings much less well (0.738).
 - Within AP films or within PA films alone it scores only 0.74–0.77, while
-  knowing nothing but the film type scores 0.706. Part of the overall 0.823
-  therefore comes from a shortcut: AP films are taken at the bedside, of
-  sicker patients.
+  the film type alone scores 0.706. Part of the overall 0.823 therefore comes
+  from the film type, a shortcut, since AP films are often taken at the
+  bedside of sicker patients.
 - Men and women score the same within error (0.821 and 0.826).
-- A "clear" result can be trusted (NPV 95.4%). A "flag" means "get this
-  checked" (Section 9.4).
+- A negative result is informative (NPV 95.4%), and a positive result is
+  better used to prioritise a film for reading (Section 9.4).
 
 ---
 
@@ -328,8 +340,9 @@ the GPIO.*
 
 The ARM never computes any part of the network. It copies the image into a
 DMA buffer, writes the threshold and a start bit, starts the DMA, polls a
-status register (there is no interrupt controller in the design), and reads
-back two logits, the margin, the decision and a cycle count.
+status register (the interrupts are wired to `IRQ_F2P`, but the notebooks
+poll), and reads back two logits, the margin, the decision and a cycle
+count.
 
 ### 6.2 The accelerator (`v1/rtl/`)
 
@@ -401,7 +414,11 @@ The block design (`v1/scripts/create_bd.tcl`) contains:
 
 The DMA's memory side and HP0 are 64-bit (V1.2.1; Section 10). Vivado refuses
 to connect the AXI4 DMA directly to the AXI3 HP0 port, so an `auto_pc`
-protocol converter sits between them.
+protocol converter sits between them. The block design as built is in
+`docs/figures/bd_layout_v1_2_hp64.pdf` and `bd_layout_v1_2_hp64_led.pdf`
+(written by `write_bd_layout`), with a GUI screenshot in
+`docs/figures/vivado_block_design_flash_hp64_led.png`; the Vivado flow is
+explained step by step in [`docs/VIVADO_PYNQ_GUIDE.md`](docs/VIVADO_PYNQ_GUIDE.md).
 
 | Block | Base address | Range |
 |---|---|---|
@@ -410,10 +427,11 @@ protocol converter sits between them.
 | `axi_gpio_led` (LED build only) | 0x4120_0000 | 64 KB |
 | DMA → HP0 → DDR | 0x0000_0000 | 512 MB |
 
-The LED GPIO has two channels. Channel 1 drives LD0–LD3 (pins R14, P14, N16,
-M14) and channel 2 drives the two RGB LEDs (6 bits: bits 0/1/2 = LD4
-blue/green/red, bits 3/4/5 = LD5). Both pin sets come from the PYNQ-Z2 board
-files through Vivado's board automation; no pin was typed by hand.
+The LED GPIO has two channels. Channel 1 drives LD0 to LD3 (pins R14, P14,
+N16, M14) and channel 2 drives the two RGB LEDs (6 bits: bits 0/1/2 = LD4
+blue/green/red on L15, G17, N15; bits 3/4/5 = LD5 on G14, L14, M15). Both pin
+sets come from the PYNQ-Z2 board files through Vivado's board automation; no
+pin was typed by hand (`docs/reports/impl/V1_impl_io_v1_2_hp64_led.rpt`).
 
 ### 6.5 How V1 scales to 224×224
 
@@ -421,8 +439,8 @@ files through Vivado's board automation; no pin was typed by hand.
 hand-written module (`line_buffer`, `mac_unit`, `relu`, `max_pool`,
 `fc_layer`), with its sizes built in and a fixed state machine
 (`fsm_control`) stepping through them. Its classifier flattened the 4×14×14
-feature map into 784 values for a 784→16 dense layer. Flatten plus the two dense layers held
-12,594 of its 12,634 parameters, 99.7% (Derived from the layer table in
+feature map into 784 values for a 784→16 dense layer. Flatten plus the two
+dense layers held 12,594 of its 12,634 parameters, 99.7% (Derived from the layer table in
 `v0_baseline/README.md`). That layer grows with the image: at 224×224 the
 same head would have 50,176 inputs and 802,816 weights in its first dense
 layer alone (Derived).
@@ -456,8 +474,8 @@ layer alone (Derived).
 
 **What 28→224 needed.** New `.mem` files (weights, biases, layer table) and
 one RTL change: `fmap_ram` grew from 64 KB to 128 KB, because conv1's output
-at 224×224 is 8×112×112 = 100,352 bytes (bug 9 in Section 7). Nothing else
-in the Verilog changed.
+at 224×224 is 8×112×112 = 100,352 bytes (bug 9 in Section 7). No other
+Verilog changed.
 
 **What it cost.**
 - **Work.** 227,360 MACs per image at 28×28 become 12,192,896 at 224×224,
@@ -489,12 +507,12 @@ flowchart LR
     G -.->|"independent audit:<br/>244 vectors + 60 traces,<br/>0 mismatches"| G
 ```
 
-*Figure 5. The proof chain. Each arrow is a bit-exact comparison of
-integers, not a tolerance.*
+*Figure 5. The proof chain. Each arrow is an exact comparison of integers,
+with no tolerance.*
 
 1. **Trained network = golden model.** Training is done in integer units,
-   so the exported weights *are* the model. The golden model reads only the
-   exported files and gives identical logits on all 4,003 test images, with
+   so the exported weights are the model itself. The golden model reads
+   only the exported files and gives identical logits on all 4,003 test images, with
    0 mismatches on the intermediates of the 244 verification images
    (Measured; manifest).
 2. **Golden model = RTL.** The simulator dumps every layer's output, and
@@ -511,10 +529,11 @@ integers, not a tolerance.*
 **The verification set.** The 244 images are a seeded (`SEED = 0`), balanced
 slice of the test split: 122 pneumonia, 122 not. They were chosen without
 looking at the model's confidence, and the model gets 70 of them wrong at
-T = −646 (Derived). The hardware must reproduce the mistakes too, because a
-matching 32-bit score cannot happen by accident. The hackathon's test checked
-one yes/no bit on eight images picked because the model was confident about
-them. That is why three datapath bugs survived five versions.
+T = −646 (Derived). The hardware has to reproduce these errors as well, and
+an exact match of 32-bit scores on such images is very unlikely by chance.
+The hackathon's test checked one yes/no bit on eight images picked because
+the model was confident about them, and under that test three datapath bugs
+went undetected across five versions.
 
 **Bug ledger, all phases.**
 
@@ -536,9 +555,8 @@ them. That is why three datapath bugs survived five versions.
 | 14 | Wrapper testbench | `send_stream` took a beat twice | Timeout in the first xsim run | False failure; the wrapper was correct | TB fixed (`d2ecb7e`) |
 | 15 | Board | HP0 AFI in 64-bit mode, PL port 32-bit | Board 0/244, then offline model search | Every odd 32-bit input word replaced | HP0 and DMA at 64 bits (V1.2.1); Section 10 |
 
-Defects 1–5 are the "five hidden bugs" of the brief. Defects 11 and 15 are
-the ones that would have produced a confidently wrong device, with no error
-message.
+Defects 1–5 are the "five hidden bugs" of the brief. Defects 11 and 15 would
+have produced a device that gives wrong answers without any error message.
 
 ---
 
@@ -568,11 +586,12 @@ adds 64 LUTs and 132 flip-flops. The accelerator's netlist is the same in all
 three builds: its 2,274 `INIT_xx` lines (weights, biases, layer table) are
 identical (`docs/V1_board_debug_log.md`).
 
-**Why 66.67 MHz, not 75 MHz.** The brief's 75 MHz was a synthesis estimate for
+**Why 66.67 MHz instead of 75 MHz.** The brief's 75 MHz was a synthesis estimate for
 the accelerator alone (WNS +0.085 ns; Synthesis estimate). On the chip:
 - The PS cannot generate 75 MHz for the fabric. Requesting it gives 76.92 MHz.
 - The next achievable frequency, 71.43 MHz, failed post-route timing by
-  0.925 ns (Measured; `docs/BRINGUP_STATUS.md`).
+  0.925 ns, with 554 failing endpoints (Measured;
+  `docs/reports/impl/V1_impl_timing_v1_2_71MHz_FAILED.rpt`).
 - The critical path is the convolution engine's feature-map address
   arithmetic, a DSP multiply-add into the block-RAM address pins. In
   `flash_hp64` this path takes 13.786 ns of the 15 ns budget, 70% of it logic
@@ -643,11 +662,10 @@ at 75 MHz: 162.62 ms (Derived).
 
 CYCLES exceeds the network's MAC count by 3,230. Of those, 3,136 are the GAP
 stream (64 channels × 49 values, one per clock), and about 94 are sequencing
-and pipeline drain (Derived). The engine does one MAC per clock by design, so
-it runs at its own peak: V1 is efficient against its design point, and that
-point is low.
+and pipeline drain (Derived). The engine does one MAC per clock by design and
+is busy with MACs in 99.97% of its cycles; the design point itself is low.
 
-### 9.3 ARM baseline, honestly
+### 9.3 ARM baseline and its limits
 
 The board's own ARM core ran the same golden model on image 0 once per
 session: 743.9, 726.3 and 665.1 ms (Measured). In the demo it ran 12 images
@@ -655,12 +673,11 @@ at a mean of 706.6 ms against the FPGA's 185.0 ms, a speedup of 3.8×
 (Measured). Every ARM result equalled the expected integers. Across sessions
 the FPGA's compute is **3.6–4.1× faster** (Derived).
 
-This baseline is weak, and the report says so: unoptimised NumPy int64 on
-one Cortex-A9 core, where NEON int8 code or both cores would be faster. The
-development PC runs the same code in **8.7 ms** (Measured;
-`docs/figures/pc_golden_timing.json`). V1 shows that the integer network runs
-exactly in hardware, not that the FPGA is fast. A Raspberry Pi comparison is
-Not yet done.
+This baseline is weak. It is unoptimised NumPy int64 on one Cortex-A9 core,
+and NEON int8 code or both cores would be faster. The development PC runs the
+same code in **8.7 ms** (Measured; `docs/figures/pc_golden_timing.json`). V1
+shows that the integer network runs exactly in hardware; it does not show a
+speed advantage for the FPGA. A Raspberry Pi comparison is Not yet done.
 
 ### 9.4 Classification on the 244
 
@@ -686,8 +703,8 @@ T = −646. The Lung Opacity row is the 122 pneumonia cases.*
 
 What the board shows about the model:
 
-- **The errors are mostly false positives: 65 against 5.** That was the
-  design choice: T was set on validation data for ≥90% sensitivity.
+- **Most errors are false positives, 65 against 5.** This follows from the
+  threshold, which was set on validation data for at least 90% sensitivity.
 - **The five false negatives are near-misses.** Their margins are −736 to
   −670, all within 90 of T.
 - **The false positives spread up to +1,928.** The median negative margin is
@@ -696,12 +713,13 @@ What the board shows about the model:
   class mixes "Normal" with "No Lung Opacity / Not Normal". The manifest
   records this three-way class for every verification image. 50 of the 76
   "Not Normal" negatives are flagged (65.8%), against 15 of the 46 "Normal"
-  ones (32.6%) (Derived). Their median margins sit either side of T. On the
+  ones (32.6%) (Derived). Their median margins, −284.5 and −1061, lie on
+  opposite sides of T. On the
   full test set, pneumonia vs Normal scores AUROC 0.9363 and pneumonia vs Not
   Normal 0.7382 (Figure 2).
-- **The 244 AUROC (0.837) is consistent with the test-set figure.** No
-  overfitting is visible here. The repository's notebook has no saved
-  training curves, so nothing more is claimed.
+- **The 244 AUROC (0.837) is consistent with the test-set figure.** This
+  comparison shows no sign of overfitting. Training curves are not committed
+  to the repository, so no further claim is made.
 
 ![Sensitivity and specificity vs threshold](docs/figures/fig_operating_characteristic.png)
 
@@ -729,14 +747,15 @@ balanced 50/50 by construction.
 - **At 5% prevalence:** PPV 9.4%, so about one flag in eleven is pneumonia,
   while NPV rises to 99.1%.
 
-A FLASH "clear" is informative; a FLASH "flag" means "read this one first".
+A negative result is therefore informative at realistic prevalences, whereas
+a positive result is best used to prioritise a film for reading.
 
 ---
 
 ## 10. Case study: a bug only the board could show
 
 **The symptom.** On 2026-10-08 the first V1.2 bitstream returned 0/244
-bit-exact (Measured). Nothing else looked wrong:
+bit-exact (Measured). The other indicators were normal:
 - the logits correlated with the expected ones at 0.98;
 - 234 of 244 decisions agreed;
 - the result was the same at 25, 50 and 66.67 MHz, which ruled out timing;
@@ -744,25 +763,25 @@ bit-exact (Measured). Nothing else looked wrong:
   outputs;
 - the DMA reported no errors.
 
-A test that compared decisions would have passed this hardware. **Only the
-logit-level bit-exact comparison caught it.**
+A test that compared only decisions would have accepted this hardware. The
+logit-level comparison is what detected the fault.
 
-**Localising it offline.** Instead of guessing at the RTL, we treated the
-golden model as an instrument and fed the board synthetic probes (Measured;
+**Localising it offline.** Instead of modifying the RTL, we used the golden
+model to interpret synthetic probe images sent to the board (Measured;
 `docs/board_runs/2026-10-08/diag_1.json`):
 - Constant images and a ramp that is constant along each row came back
   **exact**.
 - A ramp along each row came back wrong.
 
 That pointed at the order of pixels within a row. A search over candidate
-corruptions found exactly one model that reproduces every board output: each
+corruptions found only one candidate that reproduces every board output: each
 odd 32-bit word of the input (four pixels) is replaced by the even word before
 it. Candidates included byte orders within a beat, row shifts, flips, block
 reversals, beat permutations and padding variants.
 
 `board == golden(dup_even(x))` holds on **244/244 images and 24/24 probes**
 (Derived; `derived_numbers.json`). A 32-bit word pair never crosses a
-224-pixel row, which is why the row-constant probes were immune.
+224-pixel row, which is why the row-constant probes were unaffected.
 
 ![The AFI case study](docs/figures/fig_afi_case.png)
 
@@ -770,20 +789,21 @@ reversals, beat permutations and padding variants.
 (Measured). The logits correlate at r = 0.98 and 234 of 244 decisions agree,
 yet no image is bit-exact. Right: a crop of image 0 as sent and as the PL
 received it (Derived from the dup_even model). The corruption works like a
-mild horizontal blur, which the GAP network largely tolerates. That is why
-the decisions looked right.*
+mild horizontal blur, which the GAP network largely tolerates. This explains
+why most decisions were still correct.*
 
 **Predicting before checking.** The model and the golden model disagree on
 only some probes. For the second probe set, the model's predictions were
 written into the debug log before the board's results were looked at
 (`diag_2.json` had not yet been copied off the board). Two single-pixel
-probes discriminate: px(1,0) and px(223,223). The model predicted
-(−349, 102, 451) and the const-0 result, where the golden model predicts the
-const-0 result and (−386, 114, 500). The board's numbers matched the model's
-predictions exactly (Measured; `diag_2.json`).
+probes discriminate, px(1,0) and px(223,223). For px(1,0) the model
+predicted (−349, 102, 451) and the golden model the all-zero image's result,
+(−375, 106, 481). For px(223,223) the roles are exchanged: the model predicted
+the all-zero result and the golden model (−386, 114, 500). The board's numbers
+matched the model's predictions exactly (Measured; `diag_2.json`).
 
 **The mechanism.** The DMA reads DDR through the PS's HP0 port. HP0 has a
-bridge, the AFI, with its own data-width setting: bit 0 of the RDCHAN_CTRL
+bridge, the AFI, with its own data-width setting, bit 0 of the RDCHAN_CTRL
 register.
 - The V1.2 design used a 32-bit HP0.
 - PYNQ boots the PS with the AFI in 64-bit mode and does not run the
@@ -796,7 +816,8 @@ register.
 - After writing that single register bit from 0 to 1, it gave 244/244
   (run 3).
 
-Nothing else changed. That is a causal test, not a fit.
+No other setting changed between the two runs, which identifies the
+register bit as the cause.
 
 **The fix and the safeguard.** V1.2.1 makes HP0 and the DMA's memory side
 64-bit, which matches PYNQ's default; no register write is needed (run 1:
@@ -807,7 +828,7 @@ bitstream's `.hwh` on load. The demo notebook refuses to run on a mismatch.
 - Simulation drove the stream directly and never modelled the PS memory
   path, so it could not see this fault. Either model the path or keep the
   board-side check.
-- Compare integers on the board, never only decisions.
+- Compare integers on the board as well as decisions.
 - Write predictions down before looking at the discriminating test.
 
 The full record is [`docs/V1_board_debug_log.md`](docs/V1_board_debug_log.md).
@@ -823,19 +844,19 @@ The executed copy is `docs/board_runs/2026-10-09/demo_flash_hp64_led_executed.ip
 - **Load and checks.** It prints the bitstream SHA-256, VERSION and FCLK0. It
   checks the AFI against the `.hwh`, and on a mismatch it stops with "reboot
   the board and re-run". It never forces the register.
-- **LED self-test.** LD0–LD3 on for 1 s, then both RGB LEDs red, green and
+- **LED self-test.** LD0 to LD3 on for 1 s, then both RGB LEDs red, green and
   blue (0.5 s each), then off.
 - **Gallery.** The first six true positives and first six true negatives by
-  index, chosen by a fixed rule stated in the notebook, not by hand. Each is
+  index, chosen by a fixed rule stated in the notebook. Each is
   run live on the FPGA and on the ARM golden model (Figure 6): 12/12
   bit-exact, mean 185.0 ms vs 706.6 ms (Measured).
 - **Live sweep.** All 244 images with a running counter: 244/244 bit-exact,
   sensitivity 0.959, specificity 0.467, AUROC 0.8367 from the board's margins
   (Measured; 56.5 s including file loading).
 - **Slider.** Any image, live. The board signals the decision:
-  - pneumonia: LD0–LD3 blink at 4 Hz for 2.5 s with the RGB LEDs red;
+  - pneumonia: LD0 to LD3 blink at 4 Hz for 2.5 s with the RGB LEDs red;
   - negative: the RGB LEDs green for 1.5 s.
-- **Limitations, shown rather than hidden.** The notebook ends with the first
+- **Limitations.** The notebook ends with the first
   false positive and first false negative and states the operating-point
   trade-off.
 
@@ -855,14 +876,14 @@ missed.*
 - **The model.** It has modest discrimination. Most of its false positives
   are abnormal-but-not-pneumonia studies, and part of its score comes from
   the AP/PA film type (Section 5).
-- **Speed.** 66.67 MHz, not 75 MHz, and one MAC per clock, so 183 ms per
-  image. A desktop CPU runs the same integer model faster.
+- **Speed.** 66.67 MHz instead of the planned 75 MHz, and one MAC per clock,
+  so 183 ms per image. A desktop CPU runs the same integer model faster.
 - **Small-sample metrics.** The sensitivity and specificity measured on the
   board come from 244 images.
 
 | Not yet done | Why it matters |
 |---|---|
-| Raspberry Pi–class comparison and an optimised ARM baseline | To state fairly what the FPGA adds. |
+| Raspberry Pi-class comparison and an optimised ARM baseline | To state fairly what the FPGA adds. |
 | External and paediatric data | Pneumonia deaths are concentrated in children; RSNA is adults from one source. |
 | 75 MHz or faster | Needs the conv address path pipelined (V2). |
 | Manifest hashes for all exported files | The audit found 3 of 313 `.mem` files hashed per stage. |
@@ -886,7 +907,7 @@ items would turn V1's software-side evidence into board-side evidence:
 The full list, in priority order:
 
 1. **A clinical operating point and better specificity.** This is the
-   largest weakness, and the board data says where it comes from.
+   largest weakness, and the board data shows where it comes from.
    - **Evidence:**
      - 65.8% of "Not Normal" negatives are flagged, against 32.6% of
        "Normal" ones;
@@ -904,11 +925,11 @@ The full list, in priority order:
      feature-map reads, because the engine currently reads one byte per
      clock. `line_buffer_v1` is built and tested for this.
    - **Why:** latency falls roughly in proportion; this is the step that
-     makes the FPGA genuinely fast. Figure 12 projects it from the measured
+     would give the FPGA a real speed advantage. Figure 12 projects it from the measured
      cycle count. At 16 MACs per clock the compute time would be 11.5 ms at
      66.67 MHz and 10.2 ms at 75 MHz (Derived projection). That is still not
-     faster than the desktop PC's 8.7 ms, so V2's case for the FPGA must rest
-     on power, determinism and cost rather than speed alone.
+     faster than the desktop PC's 8.7 ms, so any advantage of the FPGA in V2
+     has to come from power, determinism and cost as well as speed.
 
    ![V2 projection](docs/figures/fig_v2_projection.png)
 
@@ -949,7 +970,8 @@ with torch 2.11.0+cu128, NumPy 2.1.3, pydicom 3.0.2 and OpenCV 5.0.0
 | Train and export | Run `colab/ProjectFlash_V1.ipynb` (`STAGE = 'V1.2'`, `SEED = 0`); unzip the export into `v1/mem/v1_2/flash_v1_2/` |
 | RTL simulation, wrapper | `v1\scripts\sim_tb_v1_axi.bat` → `RESULT: PASS` |
 | Synthesis of `top_v1` alone | `vivado -mode batch -source v1/scripts/synth_top_v1.tcl` |
-| Block design, implementation, bitstream | `vivado -mode batch -source v1/scripts/build_hw.tcl -tclargs verilog/ProjectFlashV1_hw/ProjectFlashV1_hw.xpr 70.0 flash_hp64` (add `flash_hp64_led 1` for the LED build) |
+| Block design, implementation, bitstream | `vivado -mode batch -source v1/scripts/build_hw.tcl -tclargs verilog/ProjectFlashV1_hw/ProjectFlashV1_hw.xpr 70.0 flash_hp64` (`70.0 flash_hp64_led 1` for the LED build) |
+| Further hardware reports and the block design picture | `vivado -mode batch -source v1/scripts/report_hw.tcl -tclargs <routed.dcp> v1_2_hp64`; `vivado -mode gui -source v1/scripts/export_bd.tcl -tclargs <project.xpr> v1_2_hp64 exit` (index: `docs/reports/README.md`) |
 | Notebooks | `python v1/board/make_notebook.py v1/board/flash_v1_2_board.ipynb 66.666672 top_v1_axi_0 axi_dma_0`; `python v1/board/make_demo_notebook.py v1/board/flash_v1_2_demo.ipynb` |
 | Board bundle | `powershell -ExecutionPolicy Bypass -File v1\board\make_board_bundle.ps1` (263 files) |
 | Board run | `v1/board/README.md`, sections 5–6 |
@@ -989,7 +1011,8 @@ For whoever restarts this later:
    the only one to use. It is local and gitignored, and it is rebuilt from
    the repository by `v1/scripts/build_hw.tcl`. `ProjectFlashV1` is legacy:
    bare `top_v1`, which cannot be implemented. See `verilog/README.md`.
-   Vivado 2022.2.
+   Vivado 2022.2. The flow is explained step by step in
+   [`docs/VIVADO_PYNQ_GUIDE.md`](docs/VIVADO_PYNQ_GUIDE.md).
 3. **Rebuild the hardware:** close the project in the GUI, then run
    `build_hw.tcl` as in Section 14. The default FCLK ceiling (70 MHz) gives
    the verified 66.666672 MHz. Check that every `runme.log` shows
@@ -1015,5 +1038,5 @@ For whoever restarts this later:
       or above.
    3. Parallel MACs in `conv_engine`, using the spare DSP slices.
 
-   Re-verify 244/244 on the board after every change, and compare logits,
-   not decisions.
+   Re-verify 244/244 on the board after every change, and compare logits as
+   well as decisions.
