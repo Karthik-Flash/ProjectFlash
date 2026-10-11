@@ -37,8 +37,8 @@ convolutions, global average pooling and a 64$\to$2 classifier, with 47,602 para
 million multiply-accumulates (MACs) per image. A single convolution engine, configured at run
 time by a 128-bit descriptor per layer, executes the same Verilog at 28$\times$28 and
 224$\times$224. Three bit-exact links connect the trained network, a NumPy golden model, RTL
-simulation and the board. On the board, all 244 verification images match the reference in both
-logits, the margin and the decision, on three bitstreams. At 66.67\,MHz an image takes
+simulation and the board. On the board, all 244 verification images match the reference in
+logit0, logit1, margin and decision, on three bitstreams. At 66.67\,MHz an image takes
 182.94\,ms, 99.97\% of the engine's one-MAC-per-clock peak. On 4,003 held-out patients the model
 reaches an AUROC of 0.8229 (95\% CI 0.8083--0.8379). The first board run produced no bit-exact
 result (0/244) although 234 of 244 decisions agreed with the reference. We located the cause
@@ -121,7 +121,7 @@ low-cost device, and parallelism is left to future work (Section~\ref{sec:v2}).
 \textit{Reporting and regulation.} CLAIM \cite{mongan2020claim} and TRIPOD+AI
 \cite{collins2024tripodai} set reporting standards for imaging AI and prediction models. We use
 Wilson intervals \cite{wilson1927} for proportions, the bootstrap \cite{efron1979} for AUROC,
-and the Hanley-McNeil standard error \cite{hanley1982} where only an AUROC and class counts are
+and the Hanley--McNeil standard error \cite{hanley1982} where only an AUROC and class counts are
 available. Section~\ref{sec:disc} relates FLASH to IEC 62304 \cite{iec62304}, ISO 14971
 \cite{iso14971}, ISO 13485 \cite{iso13485} and the FDA's AI/ML action plan
 \cite{fda2021aiml}.
@@ -474,7 +474,7 @@ set, where pneumonia against Normal scores 0.936 and against Not Normal 0.738.
 \centering
 \includegraphics[width=\columnwidth]{figures/fig_subgroup_auroc.pdf}
 \caption{Test-set AUROC by subgroup (measured, manifest of the training run). Intervals are the
-bootstrap for all test patients and for the board's 244 images, and Hanley-McNeil \cite{hanley1982}
+bootstrap for all test patients and for the board's 244 images, and Hanley--McNeil \cite{hanley1982}
 otherwise (derived), which overall gives a slightly wider 0.805--0.840. The dashed line is the
 AUROC of the radiographic projection alone.}
 \label{fig:subgroup}
@@ -648,24 +648,27 @@ projection shortcut, are reported with it.
 
 The RTL, Vivado scripts, board notebooks, bitstreams, hardware reports, raw board evidence and the
 scripts that derive every number and figure in this paper are available at
-\url{https://github.com/Karthik-Flash/ProjectFlash} (tag \code{v1.2.1-hw}). The RSNA Pneumonia
-Detection Challenge data are available from RSNA \cite{rsnadata}, and the radiographs originate
-from the NIH Chest X-ray dataset \cite{nihdata,wang2017chestxray8}. The verification vectors are
+\url{https://github.com/Karthik-Flash/ProjectFlash} (tag \code{v1.2.1-hw}). The data are those of
+the RSNA Pneumonia Detection Challenge on Kaggle \cite{rsnadata}, described by Shih \textit{et al.}
+\cite{shih2019rsna}, and the radiographs originate from the NIH Chest X-ray dataset
+\cite{nihdata,wang2017chestxray8}. The verification vectors are
 regenerated from the data by the project's training notebook with a fixed seed.
 
 \section*{Ethics and Data Licence}
 
 This study used only de-identified, publicly available radiographs and annotations from the RSNA
-Pneumonia Detection Challenge, under RSNA's terms of use, which permit research use and prohibit
-any attempt to identify or contact the subjects. The NIH Clinical Center is the provider of the
+Pneumonia Detection Challenge \cite{rsnadata,shih2019rsna}, under the competition's data-use rules
+and RSNA's terms of use. RSNA's terms permit research use and prohibit any attempt to identify or
+contact the subjects. The NIH Clinical Center is the provider of the
 radiographs. No data were collected from patients for this work. The paper reproduces no
 radiographs; the figures in the repository that show radiographs carry the attribution that the
 terms require.
 
 \section*{Acknowledgment}
 
-The first FLASH prototype was developed for the AMD FPGA Hackathon 2026, where it placed fifth,
-and we thank the organisers. We acknowledge the NIH Clinical Center as the provider of the chest
+The first FLASH prototype was developed for the AMD FPGA Hackathon 2026, held at BITS Pilani,
+Hyderabad Campus, in March 2026 and organised by IEEE BPHC, the IEEE Student Branch of BITS
+Pilani, Hyderabad Campus. FLASH placed 5th, and we thank the organisers. We acknowledge the NIH Clinical Center as the provider of the chest
 radiographs, and the RSNA and the Society of Thoracic Radiology for the pneumonia annotations.
 
 \bibliographystyle{IEEEtran}
